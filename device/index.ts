@@ -1,0 +1,201 @@
+import { createSignal, createEffect } from 'solid-js';
+import { createObservedSignal, reactivePromise } from '../util/signals.js';
+import { promisifyEvent, promisifyTimeout } from '../util/promisify.js';
+import { enqueue } from '../util/ble-queue.js';
+import { getColorSchemeCommand } from './color.js';
+import { getStopCommand, getActivateCommand } from './activate.js';
+import { parseSample } from './cables.js';
+import { parseMode, MODES } from './mode.js';
+import { parseReps } from './reps.js';
+
+const PRIMARY_SERVICE_ID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const CHARACTERISTICS = {
+  LEFT_CABLE: 'bc4344e9-8d63-4c89-8263-951e2d74f744',
+  RIGHT_CABLE: '92ef83d6-8916-4921-8172-a9919bc82566',
+  MODE: '67d0dae0-5bfc-4ea2-acc9-ac784dee7f29',
+  VERSION: '74e994ac-0e80-4c02-9cd0-76cb31d3959b',
+  BLE_UPDATE_REQUEST: 'ef0e485a-8749-4314-b1be-01e57cd1712e',
+  UPDATE_STATE: '383f7276-49af-4335-9072-f01b0f8acad6',
+  WIFI_STATE: 'a7d06ce0-2e84-485f-9c25-3d4ba6fe7319',
+  SAMPLE: '90e991a6-c548-44ed-969b-eb541014eae3',
+  DIAGNOSTIC_DETAILS: '5fa538ec-d041-42f6-bbd6-c30d475387b7',
+  REPS: '8308f2a6-0875-4a94-a86f-5c5c5e1b068a',
+  COMMAND: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
+};
+
+class VFormTrainer {
+  public connected: () => boolean;
+  public active: () => boolean;
+  private _setConnected: (connected: boolean) => void;
+  public sample: () => ReturnType<typeof parseSample>;
+  public mode: () => ReturnType<typeof parseMode>;
+  public reps: () => ReturnType<typeof parseReps>;
+  public repCount: () => number;
+  public rangeOfMotion: () => { top: number; bottom: number };
+
+  private _device?: BluetoothDevice;
+  private _server?: BluetoothRemoteGATTServer;
+  private _service?: BluetoothRemoteGATTService;
+  private _repData?: unknown[];
+
+  constructor() {
+    [this.connected, this._setConnected] = createSignal(false);
+    this.sample = this.createPollSignal(CHARACTERISTICS.SAMPLE, parseSample);
+    this.mode = this.createNotifySignal(CHARACTERISTICS.MODE, parseMode);
+    this.reps = this.createNotifySignal(CHARACTERISTICS.REPS, parseReps);
+    this.active = () => this.connected() && this.mode() !== MODES.BASELINE;
+    this.repCount = () => {
+      const { up, down } = this.reps();
+      return (Math.max(0, up - 1) + down) / 2;
+    };
+    this.rangeOfMotion = () => {
+      const { rangeTop, rangeBottom } = this.reps();
+      return { top: rangeTop, bottom: rangeBottom };
+    };
+  }
+  async connect() {
+    this._setConnected(undefined);
+    try {
+      const abortController = new AbortController();
+      try {
+        this._server = await Promise.race([
+          promisifyTimeout(4000),
+          (async () => {
+            const devices = await navigator.bluetooth.getDevices();
+            const device = devices.find((d) => d.name.startsWith('Vee'));
+            if (device) {
+              device.watchAdvertisements({
+                signal: abortController.signal,
+              });
+
+              await promisifyEvent(device, 'advertisementreceived');
+
+              return await (this._device = device).gatt.connect();
+            }
+            return undefined;
+          })(),
+        ]);
+      } catch (e) {
+        console.log('unable to connect to existing device', e);
+      } finally {
+        abortController.abort();
+      }
+
+      if (!this._server) {
+        this._device = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: 'Vee' }],
+          optionalServices: [PRIMARY_SERVICE_ID],
+        });
+        this._server = await this._device.gatt.connect();
+      }
+
+      this._device.addEventListener('gattserverdisconnected', () => {
+        console.log('disconnect');
+        this._device = null;
+        this._server = null;
+        this._service = null;
+        this._setConnected(false);
+      });
+      this._service = await this._server.getPrimaryService(PRIMARY_SERVICE_ID);
+      this._setConnected(true);
+      await this.stop();
+      await this.setColor(0x000000);
+    } catch (e) {
+      console.log(e);
+      this._setConnected(false);
+    }
+  }
+  async disconnect() {
+    this._server.disconnect();
+  }
+  async setColor(color) {
+    return this.setColorScheme([color, color, color]);
+  }
+  async setColorScheme(colors) {
+    await this._writeCommand(getColorSchemeCommand(colors));
+  }
+  async activate(reps, force) {
+    await this._writeCommand(getActivateCommand(reps, force));
+    return reactivePromise((resolve) => {
+      let current: unknown[];
+      this._repData = [];
+
+      console.log('start set', this._repData);
+
+      createEffect(() => {
+        const repCount = this.repCount();
+        const repIndex = Math.floor(repCount);
+        if (repCount === reps.repCounts.total - 1) {
+          resolve(this.stop());
+        } else {
+          const rep = (this._repData[repIndex] = this._repData[repIndex] || {
+            concentric: [],
+            eccentric: [],
+          });
+          current = rep[repCount % 1 ? 'concentric' : 'eccentric'];
+        }
+      });
+
+      createEffect(() => {
+        current.push(this.sample());
+      });
+    });
+  }
+  async stop() {
+    const repData = this._repData;
+    this._repData = undefined;
+    await this._writeCommand(getStopCommand());
+    return repData;
+  }
+  async _writeCommand(command) {
+    await enqueue(
+      await this._service.getCharacteristic(CHARACTERISTICS.COMMAND),
+      'writeValueWithoutResponse',
+      command
+    );
+  }
+  createNotifySignal<T extends (d?: DataView) => any>(
+    characteristicUuid: string,
+    parseDataView: T
+  ) {
+    return createObservedSignal(parseDataView(undefined), async (set) => {
+      const characteristic = await this._service.getCharacteristic(
+        characteristicUuid
+      );
+      const update = () => set(parseDataView(characteristic.value));
+      await enqueue(characteristic, 'startNotifications');
+      characteristic.addEventListener('characteristicvaluechanged', update);
+      await enqueue(characteristic, 'readValue');
+      return async () => {
+        characteristic.removeEventListener(
+          'characteristicvaluechanged',
+          update
+        );
+        await enqueue(characteristic, 'stopNotifications');
+      };
+    });
+  }
+  createPollSignal<T extends (d?: DataView) => any>(
+    characteristicUuid: string,
+    parseDataView: T
+  ) {
+    return createObservedSignal(parseDataView(undefined), async (set) => {
+      let cancelled = false;
+      const characteristic = await this._service.getCharacteristic(
+        characteristicUuid
+      );
+      while (!cancelled) {
+        set(parseDataView(await enqueue(characteristic, 'readValue')));
+      }
+      return () => {
+        cancelled = true;
+      };
+    });
+  }
+}
+
+declare global {
+  var Trainer: VFormTrainer;
+}
+
+export default window.Trainer = new VFormTrainer();
