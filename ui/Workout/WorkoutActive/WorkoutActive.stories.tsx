@@ -2,7 +2,7 @@ import { Story, Meta } from '@storybook/html';
 import { WorkoutActiveView } from './WorkoutActive.js';
 
 export default {
-  title: 'Components/WorkoutActive',
+  title: 'Workout/WorkoutActive',
   argTypes: {
     exercise: { control: 'text' },
     video: { control: 'text' },

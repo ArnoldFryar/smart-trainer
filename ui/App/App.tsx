@@ -1,9 +1,9 @@
 import { Show, createSignal } from 'solid-js';
-import Trainer from '../../../device/index.js';
-import { WorkoutForm } from '../WorkoutForm/WorkoutForm.js';
-import { WorkoutActive } from '../WorkoutActive/WorkoutActive.js';
-import { Button } from '../Elements/Elements.js';
-import { createLocalSignal } from '../../../util/signals.js';
+import Trainer from '../../device/index.js';
+import { WorkoutForm } from '../Workout/WorkoutForm/WorkoutForm.js';
+import { WorkoutActive } from '../Workout/WorkoutActive/WorkoutActive.js';
+import { Button } from '../_common/Elements/Elements.js';
+import { createLocalSignal } from '../../util/signals.js';
 
 export function App() {
   return (

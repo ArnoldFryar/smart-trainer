@@ -1,5 +1,5 @@
 import { For } from 'solid-js';
-import { Button, Input } from '../Elements/Elements.js';
+import { Button, Input } from '../../_common/Elements/Elements.js';
 
 type Exercise = {
   name: string;

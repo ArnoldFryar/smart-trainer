@@ -2,7 +2,7 @@ import { Story, Meta } from '@storybook/html';
 import { WorkoutForm } from './WorkoutForm.js';
 
 export default {
-  title: 'Components/WorkoutForm',
+  title: 'Workout/WorkoutForm',
   argTypes: {
     exercises: { control: 'object' },
     onSubmit: { action: 'submit' },

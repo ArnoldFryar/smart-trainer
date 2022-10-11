@@ -4,7 +4,7 @@ import {
   RangeOfMotion,
 } from '../WeightAndRangeOfMotion/WeightAndRangeOfMotion.js';
 import { ExerciseDemonstration } from '../ExerciseDemonstration/ExerciseDemonstration.js';
-import { Button } from '../Elements/Elements.js';
+import { Button } from '../../_common/Elements/Elements.js';
 import { getReps, getForces, PRESETS } from '../../../device/activate.js';
 
 export namespace WorkoutActive {
