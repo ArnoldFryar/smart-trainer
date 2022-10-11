@@ -29,7 +29,7 @@ function ConnectButton() {
         ${
           Trainer.connected()
             ? 'hover:bg-red-900'
-            : 'hover:bg-gradient-to-br hover:from-sky-700 hover:to-sky-900 active:from-sky-900 active:to-sky-900'
+            : 'hover:bg-gradient-to-br hover:from-primary-700 hover:to-primary-900 active:from-primary-900 active:to-primary-900'
         }`}
       onClick={() => {
         Trainer.connected() ? Trainer.disconnect() : Trainer.connect();

@@ -1,5 +1,6 @@
 import path from 'path';
 import solidPlugin from 'vite-plugin-solid';
+import postcssConfig from "../../postcss.config.js";
 
 export const addons = [
   path.dirname(require.resolve(path.join('@storybook/html', 'package.json'))),
@@ -20,7 +21,9 @@ export function readPackageJson() {
 }
 
 export const viteFinal = async (config, { presets }) => {
-  // console.log(config);
   // config.plugins.unshift(solidPlugin({ hot: false }));
+  // config.css ??= {};
+  // config.css.postcss = postcssConfig;
+  // console.log(config.plugins)
   return config;
 };

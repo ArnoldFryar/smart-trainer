@@ -131,7 +131,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
       style="height:100vh"
     >
       <div class="text-center">
-        <div class="text-4xl font-light text-slate-200">{props.exercise}</div>
+        <div class="text-4xl font-light text-gray-200">{props.exercise}</div>
         <InfoButton /><StopButton />
       </div>
       <div
@@ -185,7 +185,7 @@ function Reps(props: Reps.Props) {
           <For each={props.powerPerRep}>
             {(power: number, index) => (
               <div
-                class={`m-1 flex-1 bg-sky-700 rounded -skew-x-6 bg-gradient-to-br from-cyan-100 to-cyan-400 shadow-lg shadow-cyan-500/30 border border-cyan-300 ${
+                class={`m-1 flex-1 bg-primary-700 rounded -skew-x-6 bg-gradient-to-b from-primary-100 via-primary-300 to-primary-500 shadow-lg shadow-primary-500/30 border border-primary-400 ${
                   index() > props.currentRep ? 'opacity-25' : ''
                 }`}
                 style={`max-width:25%; height: ${(power / maxPower()) * 100}%`}
@@ -196,10 +196,10 @@ function Reps(props: Reps.Props) {
       </div>
       <div class="text-right mt-8">
         <div class="">
-          <span class="text-slate-100 text-7xl">{props.currentRep}</span>
-          <span class="text-slate-400 text-5xl">/{props.totalReps}</span>
+          <span class="text-gray-100 text-7xl">{props.currentRep}</span>
+          <span class="text-gray-400 text-5xl">/{props.totalReps}</span>
         </div>
-        <span class="text-sm font-bold tracking-wider text-slate-500 mx-1">
+        <span class="text-sm font-bold tracking-wider text-gray-500 mx-1">
           REPS
         </span>
       </div>

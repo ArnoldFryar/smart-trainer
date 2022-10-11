@@ -46,12 +46,12 @@ export function Weight(props: Weight.Props) {
     >
       <div class="text-9xl font-medium leading-none">
         {weight().toFixed(0)}
-        <span class="text-slate-400 text-7xl">
+        <span class="text-gray-400 text-7xl">
           {(weight() % 1).toFixed(1).slice(1)}
         </span>
       </div>
       <span
-        class="block text-sm font-bold tracking-wider text-slate-500 mx-1"
+        class="block text-sm font-bold tracking-wider text-gray-500 mx-1"
         style="margin-top:-0.5em;"
       >
         TOTAL {props.unit.toUpperCase()}
@@ -72,30 +72,30 @@ export function RangeOfMotion(props: RangeOfMotion.Props) {
   return (
     <svg class={props.class} viewBox={viewBox}>
       <filter id="f2" x="0" y="0" width="200%" height="200%">
-        <feGaussianBlur result="blurOut" in="offOut" stdDeviation="5" />
+        <feGaussianBlur result="blurOut" in="offOut" stdDeviation="7" />
         <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
       </filter>
-      <Circle stroke="#345" direction={1} percent={1} />
-      <Circle stroke="#345" direction={-1} percent={1} />
+      <Circle stroke='hsl(var(--gray-700))' direction={1} percent={1} />
+      <Circle stroke='hsl(var(--gray-700))' direction={-1} percent={1} />
       <Circle
-        stroke={props.leftROM >= 0 ? '#00ddfa' : '#008ada'}
+        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-800))'}
         direction={1}
         percent={props.leftROM}
         filter="url(#f2)"
       />
       <Circle
-        stroke={props.rightROM >= 0 ? '#00ddfa' : '#008ada'}
+        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-800))'}
         direction={-1}
         percent={props.rightROM}
         filter="url(#f2)"
       />
       <Circle
-        stroke={props.leftROM >= 0 ? '#a8f2ff' : '#008ada'}
+        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-100))' : 'hsl(var(--secondary-600))'}
         direction={1}
         percent={props.leftROM}
       />
       <Circle
-        stroke={props.rightROM >= 0 ? '#a8f2ff' : '#008ada'}
+        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-100))' : 'hsl(var(--secondary-600))'}
         direction={-1}
         percent={props.rightROM}
       />

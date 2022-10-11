@@ -9,7 +9,7 @@ export const decorators = [
     }
     const root = document.getElementById('storybook-root');
     const solid = document.createElement('div');
-    solid.className = 'bg-slate-800 text-white';
+    solid.className = 'bg-gray-900 text-white';
 
     solid.setAttribute('id', 'solid-root');
     root.appendChild(solid);
@@ -33,7 +33,7 @@ export const parameters = {
     values: [
       {
         name: 'dark',
-        value: '#1e293b',
+        value: 'hsl(var(--gray-900))',
       },
       {
         name: 'light',

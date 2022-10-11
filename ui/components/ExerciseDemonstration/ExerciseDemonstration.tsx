@@ -62,7 +62,7 @@ export function ExerciseDemonstration(props: ExerciseDemonstration.Props) {
 
   return (
     <div
-      class={`relative bg-slate-800 ${!visible() && 'hidden'}`}
+      class={`relative bg-gray-900 ${!visible() && 'hidden'}`}
       style="
     width:400px;
     height:400px;
