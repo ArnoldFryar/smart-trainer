@@ -2,7 +2,7 @@ import { Story, Meta } from '@storybook/html';
 import { ExerciseDemonstration } from './ExerciseDemonstration.js';
 
 export default {
-  title: 'Example/ExerciseDemonstration',
+  title: 'Components/ExerciseDemonstration',
   argTypes: {
     video: { control: 'text' },
   },

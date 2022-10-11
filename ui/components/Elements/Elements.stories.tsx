@@ -2,7 +2,7 @@ import { Meta } from '@storybook/html';
 import { Button, Input } from './Elements.js';
 
 export default {
-  title: 'Example/Elements',
+  title: 'Components/Elements',
   argTypes: {},
 } as Meta;
 

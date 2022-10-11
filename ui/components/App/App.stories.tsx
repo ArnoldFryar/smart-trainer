@@ -1,9 +1,9 @@
 import { Meta } from '@storybook/html';
-import { App } from './App.js';
+import { App as AppComponent } from './App.js';
 
 export default {
-  title: 'Example/App',
+  title: 'App',
   argTypes: {},
 } as Meta;
 
-export const DefaultApp = (args: any) => <App {...args} />;
+export const App = (args: any) => <AppComponent {...args} />;

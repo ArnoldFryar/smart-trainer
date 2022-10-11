@@ -2,7 +2,7 @@ import { Story, Meta } from '@storybook/html';
 import { WeightAndRangeOfMotion } from './WeightAndRangeOfMotion.js';
 
 export default {
-  title: 'Example/WeightAndRangeOfMotion',
+  title: 'Components/WeightAndRangeOfMotion',
   argTypes: {
     unit: {
       options: ['lbs', 'kg'],
