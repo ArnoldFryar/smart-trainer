@@ -27,6 +27,7 @@
     "vite-plugin-solid": "^2.3.3"
   },
   "dependencies": {
+    "idb": "^7.1.0",
     "solid-js": "^1.5.5",
     "video.js": "^7.20.3"
   }
