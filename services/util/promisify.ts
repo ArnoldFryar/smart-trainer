@@ -8,7 +8,7 @@ export function promisifyEvent(target: EventTarget, eventName: string): Promise<
   })
 } 
 
-export function promisifyTimeout(timeout: number): Promise<void> {
+export function promisifyTimeout(timeout: number): Promise<undefined> {
   return new Promise((resolve) => {
     setTimeout(resolve, timeout);
   })

@@ -20,6 +20,16 @@ async function run() {
 
 export function enqueue(
   characteristic: BluetoothRemoteGATTCharacteristic,
+  fn: "readValue",
+  ...args: unknown[]
+): Promise<DataView>;
+export function enqueue(
+  characteristic: BluetoothRemoteGATTCharacteristic,
+  fn: keyof BluetoothRemoteGATTCharacteristic,
+  ...args: unknown[]
+): Promise<void>;
+export function enqueue(
+  characteristic: BluetoothRemoteGATTCharacteristic,
   fn: keyof BluetoothRemoteGATTCharacteristic,
   ...args: unknown[]
 ) {
