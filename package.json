@@ -29,6 +29,7 @@
   "dependencies": {
     "idb": "^7.1.0",
     "solid-js": "^1.5.5",
-    "video.js": "^7.20.3"
+    "video.js": "^7.20.3",
+    "xstate": "^4.33.6"
   }
 }

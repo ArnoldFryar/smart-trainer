@@ -1,22 +1,20 @@
-export function AppShell(props) {
+import { createSignal, For } from "solid-js"
+
+export function AppShell(props: { tabs: { label: string, view: any }[] }) {
+  const [selectedTab, setSelectedTab] = createSignal(0);
   return (
     <div class="flex flex-col h-screen">
       <div class="flex-1">
-        {props.children}
+        {props.tabs[selectedTab()].view}
       </div>
       <div class="flex bg-gray-800 justify-center">
-        <NavItem selected>
-          Activity
-        </NavItem>
-        <NavItem>
-          Performance
-        </NavItem>
-        <NavItem>
-          Learn
-        </NavItem>
-        <NavItem>
-          Settings
-        </NavItem>
+        <For each={props.tabs}>
+          {(tab, index) => (
+            <NavItem selected={index() === selectedTab()} onClick={() => setSelectedTab(index())}>
+              {tab.label}
+            </NavItem>
+          )}
+        </For>
       </div>
     </div>
   )
@@ -24,7 +22,7 @@ export function AppShell(props) {
 
 function NavItem(props) {
   return (
-    <div class={`p-4 font-medium ${props.selected ? "text-primary-500" : "text-gray-500 hover:text-gray-400"}`}>
+    <div onClick={props.onClick} class={`p-4 font-medium ${props.selected ? "text-primary-500" : "text-gray-500 hover:text-gray-400 cursor-pointer"}`}>
       {props.children}
     </div>
   )

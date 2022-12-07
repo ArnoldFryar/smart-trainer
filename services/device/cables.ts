@@ -1,4 +1,16 @@
-export function parseSample(dataview?: DataView) {
+export type Cable = {
+  position: number,
+  velocity: number,
+  force: number
+};
+
+export type Sample = {
+  time: number,
+  left: Cable,
+  right: Cable
+};
+
+export function parseSample(dataview?: DataView): Sample {
   if (!dataview?.byteLength) {
     return {
       left: { position: 0, velocity: 0, force: 0 },
@@ -22,7 +34,7 @@ export function parseSample(dataview?: DataView) {
   };
 }
 
-export function parseCable(dataview: DataView) {
+export function parseCable(dataview: DataView): Cable {
   return {
     position: dataview.getFloat32(0, true),
     velocity: dataview.getFloat32(4, true),

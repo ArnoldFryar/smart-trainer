@@ -6,6 +6,7 @@ import {
   getListener,
   onMount,
   onCleanup,
+  createEffect,
 } from 'solid-js';
 
 export function createObservedSignal<T>(
@@ -59,13 +60,27 @@ export function createLocalSignal<T>(key: string, initialValue: T) {
   ] as const;
 }
 
-export function reactivePromise(fn) {
-  return new Promise((resolve) => {
+export function reactivePromise<T>(fn: (resolve: (data?: T) => void, aborted?: Accessor<boolean>) => any, aborted?: Accessor<boolean>): Promise<T> {
+  return new Promise((resolve, reject) => {
     createRoot((disposeRoot) => {
+      createEffect(() => {
+        if (aborted()) {
+          disposeRoot();
+          reject(new Error('aborted'));
+        }
+      });
       fn((data) => {
         disposeRoot();
         resolve(data);
-      });
+      }, aborted);
     });
+  });
+}
+
+export function createAbortEffect(fn: (abort: Accessor<boolean>) => any) {
+  createEffect(() => {
+    const [aborted, setAborted] = createSignal(false);
+    fn(aborted);
+    onCleanup(() => setAborted(true));
   });
 }

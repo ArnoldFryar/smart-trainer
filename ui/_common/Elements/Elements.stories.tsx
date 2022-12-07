@@ -1,5 +1,5 @@
 import { Meta } from '@storybook/html';
-import { Button, Input } from './Elements.js';
+import { Button, Input, Radio } from './Elements.js';
 
 export default {
   title: 'Common/Elements',
@@ -14,4 +14,8 @@ export const DefaultInput = (args: any) => <Input {...args} />;
 DefaultInput.args = {
   placeholder: "Type",
   value: ""
+};
+export const DefaultRadio = (args: any) => <Radio {...args} />;
+DefaultRadio.args = {
+  
 };

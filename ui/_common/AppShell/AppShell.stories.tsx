@@ -6,4 +6,19 @@ export default {
   argTypes: {},
 } as Meta;
 
-export const AppShell = (args: any) => <AppShellComponent {...args} />;
+export const AppShell = (args: any) => <AppShellComponent tabs={[{
+  label: "Activity",
+  view: <div>Activity</div>
+}, {
+  label: "Performance",
+  view: <div>Performance</div>
+}, {
+  label: "Workout",
+  view: <div>Workout</div>
+}, {
+  label: "Learn",
+  view: <div>Learn</div>
+}, {
+  label: "Settings",
+  view: <div>Settings</div>
+}]} />;

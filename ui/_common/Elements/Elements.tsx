@@ -40,3 +40,28 @@ export function Input(props) {
     />
   );
 }
+
+export function Radio(props) {
+  return (
+    <label>
+      <input
+        {...props}
+        type="radio"
+        class="hidden peer"
+        children={undefined}
+      />
+      <div class={`
+        p-4
+        border
+        border-gray-400
+        text-white
+        focus:border-white
+        peer-checked:bg-primary-900
+        peer-checked:border-primary-400
+        ${props.class}
+      `}>
+        {props.children}
+      </div>
+    </label>
+  );
+}

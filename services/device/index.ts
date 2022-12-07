@@ -1,5 +1,5 @@
-import { createSignal, createEffect } from 'solid-js';
-import { createObservedSignal, reactivePromise } from '../util/signals.js';
+import { createSignal } from 'solid-js';
+import { createObservedSignal } from '../util/signals.js';
 import { promisifyEvent, promisifyTimeout } from '../util/promisify.js';
 import { enqueue } from '../util/ble-queue.js';
 import { getColorSchemeCommand } from './color.js';
@@ -30,13 +30,12 @@ class VFormTrainer {
   public sample: () => ReturnType<typeof parseSample>;
   public mode: () => ReturnType<typeof parseMode>;
   public reps: () => ReturnType<typeof parseReps>;
-  public repCount: () => number;
-  public rangeOfMotion: () => { top: number; bottom: number };
+  public phase: () => "concentric" | "eccentric";
+  public rangeOfMotion: () => { top: number; bottom: number, left: number, right: number };
 
   private _device?: BluetoothDevice;
   private _server?: BluetoothRemoteGATTServer;
   private _service?: BluetoothRemoteGATTService;
-  private _repData?: unknown[];
 
   constructor() {
     [this.connected, this._setConnected] = createSignal(false);
@@ -44,13 +43,20 @@ class VFormTrainer {
     this.mode = this.createNotifySignal(CHARACTERISTICS.MODE, parseMode);
     this.reps = this.createNotifySignal(CHARACTERISTICS.REPS, parseReps);
     this.active = () => this.connected() && this.mode() !== MODES.BASELINE;
-    this.repCount = () => {
+    this.phase = () => {
       const { up, down } = this.reps();
-      return (Math.max(0, up - 1) + down) / 2;
+      return up === down ? 'concentric' : 'eccentric';
     };
     this.rangeOfMotion = () => {
       const { rangeTop, rangeBottom } = this.reps();
-      return { top: rangeTop, bottom: rangeBottom };
+      const { left, right } = this.sample();
+      const range = rangeTop - rangeBottom;
+      return { 
+        top: rangeTop, 
+        bottom: rangeBottom, 
+        left: (left.position - rangeBottom) / range, 
+        right: (right.position - rangeBottom) / range
+      };
     };
   }
   async connect() {
@@ -116,36 +122,9 @@ class VFormTrainer {
   }
   async activate(reps, force) {
     await this._writeCommand(getActivateCommand(reps, force));
-    return reactivePromise((resolve) => {
-      let current: unknown[];
-      this._repData = [];
-
-      console.log('start set', this._repData);
-
-      createEffect(() => {
-        const repCount = this.repCount();
-        const repIndex = Math.floor(repCount);
-        if (repCount === reps.repCounts.total - 1) {
-          resolve(this.stop());
-        } else {
-          const rep = (this._repData[repIndex] = this._repData[repIndex] || {
-            concentric: [],
-            eccentric: [],
-          });
-          current = rep[repCount % 1 ? 'concentric' : 'eccentric'];
-        }
-      });
-
-      createEffect(() => {
-        current.push(this.sample());
-      });
-    });
   }
   async stop() {
-    const repData = this._repData;
-    this._repData = undefined;
     await this._writeCommand(getStopCommand());
-    return repData;
   }
   async _writeCommand(command) {
     await enqueue(

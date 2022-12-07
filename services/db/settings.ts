@@ -7,11 +7,12 @@ interface AppDB extends DBSchema {
   };
   workouts: {
     value: {
-      type: string;
+      id: string;
       sets: string[];
       time: number;
     };
     key: string;
+    indexes: { time: number };
   };
   sets: {
     value: {
@@ -38,10 +39,12 @@ interface AppDB extends DBSchema {
   };
 }
 
-// const db = await openDB<AppDB>('my-db', 1, {
-//   upgrade(db) {
-//     db.createObjectStore('settings');
-//     const setStore = db.createObjectStore('sets');
-//     setStore.createIndex('exercise', 'exercise');
-//   },
-// });
+export default await openDB<AppDB>('my-db', 1, {
+  upgrade(db) {
+    db.createObjectStore('settings');
+    const workoutStore = db.createObjectStore('workouts');
+    workoutStore.createIndex('time', 'time');
+    const setStore = db.createObjectStore('sets');
+    setStore.createIndex('exercise', 'exercise');
+  },
+});

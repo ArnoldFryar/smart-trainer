@@ -4,7 +4,6 @@ import { WorkoutForm } from './WorkoutForm.js';
 export default {
   title: 'Workout/WorkoutForm',
   argTypes: {
-    exercises: { control: 'object' },
     onSubmit: { action: 'submit' },
   },
 } as Meta;

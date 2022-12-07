@@ -4,15 +4,31 @@ import { WorkoutForm } from '../Workout/WorkoutForm/WorkoutForm.js';
 import { WorkoutActive } from '../Workout/WorkoutActive/WorkoutActive.js';
 import { Button } from '../_common/Elements/Elements.js';
 import { createLocalSignal } from '../../services/util/signals.js';
+import { AppShell } from '../_common/AppShell/AppShell.jsx';
 
 export function App() {
+  const [workout, setWorkout] = createSignal(false);
   return (
     <>
-      <ConnectButton />
-      <Show when={Trainer.connected()}>
-        <Workout />
-        <Debug />
+      <Show when={!workout()} fallback={<Workout onExit={() => setWorkout(false)}/>}>
+        <AppShell tabs={[{
+          label: "Activity",
+          view: <Button onClick={() => setWorkout(true)}>Start Workout</Button>
+        }, {
+          label: "Performance",
+          view: <div>Performance</div>
+        }, {
+          label: "Learn",
+          view: <div>Learn</div>
+        }, {
+          label: "Settings",
+          view: <div>
+            <h1>Settings</h1>
+            <ConnectButton />
+          </div>
+        }]} />
       </Show>
+      <Debug />
     </>
   );
 }
@@ -46,38 +62,30 @@ function ConnectButton() {
   );
 }
 
-function Workout() {
+function Workout(props: { onExit: () => void }) {
   const [workoutActive, setWorkoutActive] = createSignal(false);
-  const [exercises, setExercises] = createLocalSignal('exercises', [
-    {
-      name: 'Bench Press',
-      reps: 8,
-      weight: 30,
-    },
-  ]);
 
   return (
     <>
+      <Button class="absolute top-4 right-4" onClick={() => props.onExit()}>
+        Exit
+      </Button>
       <Show when={!workoutActive()}>
         <WorkoutForm
-          exercises={exercises()}
-          onSubmit={(exercises) => {
-            setExercises(exercises);
-            setWorkoutActive(true);
+          connected={Trainer.connected()}
+          onSubmit={async () => {
+            if (!Trainer.connected()) {
+              await Trainer.connect();
+            }
+            setWorkoutActive(Trainer.connected());
           }}
         />
       </Show>
       <Show when={workoutActive()}>
         <WorkoutActive
-          exercise={exercises()[0].name}
-          weight={exercises()[0].weight}
-          warmupReps={3}
-          workingReps={exercises()[0].reps}
           unit="lbs"
-          increment={0}
-          preset={'ISOKINETIC'}
           onComplete={() => {
-            setWorkoutActive(false);
+            props.onExit();
           }}
         />
       </Show>
@@ -87,14 +95,16 @@ function Workout() {
 
 function Debug() {
   return (
-    <div class="bg-black text-white opacity-20 absolute bottom-4 right-4 text-xs p-4 pointer-events-none">
-      <div>Mode</div>
-      <pre>{JSON.stringify(Trainer.mode(), null, 2)}</pre>
-      <div>Sample</div>
-      <pre>{JSON.stringify(Trainer.sample(), null, 2)}</pre>
-      <div>Reps</div>
-      <pre>{JSON.stringify(Trainer.reps(), null, 2)}</pre>
-    </div>
+    <Show when={Trainer.connected()}>
+      <div class="bg-black text-white opacity-20 absolute bottom-4 right-4 text-xs p-4 pointer-events-none">
+        <div>Mode</div>
+        <pre>{JSON.stringify(Trainer.mode(), null, 2)}</pre>
+        <div>Sample</div>
+        <pre>{JSON.stringify(Trainer.sample(), null, 2)}</pre>
+        <div>Reps</div>
+        <pre>{JSON.stringify(Trainer.reps(), null, 2)}</pre>
+      </div>
+    </Show>
   );
 }
 

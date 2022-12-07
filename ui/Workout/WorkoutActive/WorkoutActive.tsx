@@ -1,34 +1,28 @@
-import { Show, For, createSignal, createEffect, untrack } from 'solid-js';
+import { Show, For, createEffect } from 'solid-js';
 import {
   Weight,
   RangeOfMotion,
 } from '../WeightAndRangeOfMotion/WeightAndRangeOfMotion.js';
 import { ExerciseDemonstration } from '../ExerciseDemonstration/ExerciseDemonstration.js';
 import { Button } from '../../_common/Elements/Elements.js';
-import { getReps, getForces, PRESETS } from '../../../services/device/activate.js';
+import { createWorkoutService } from '../../../services/workout/machine.js';
 
 export namespace WorkoutActive {
   export interface Props {
-    exercise: string;
-    warmupReps: number;
-    workingReps: number;
     unit: 'lbs' | 'kg';
-    weight: number;
-    increment: number;
-    preset: string;
     onComplete: (data: any) => void;
   }
 }
 
 export function WorkoutActive(props: WorkoutActive.Props) {
-  createEffect(async () => {
-    const data = await Trainer.activate(
-      getReps(props.workingReps, props.warmupReps, props.warmupReps),
-      getForces(props.weight, props.increment, PRESETS[props.preset])
-    );
-    console.log(data);
-    props.onComplete(data);
-  });
+  const [workoutState, send] = createWorkoutService({});
+
+  createEffect(() => {
+    console.log(workoutState().value, workoutState().context);
+  })
+
+  const currentState = () => workoutState().value;
+  const exercise = () => workoutState().context.currentSet?.value.exercise;
 
   const leftWeight = () => {
     const { left } = Trainer.sample();
@@ -40,72 +34,37 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     return right.position <= 0.5 && right.velocity === 0 ? 0 : right.force;
   };
 
-  const leftROM = () =>
-    (Trainer.sample().left.position - Trainer.reps().rangeBottom) /
-    (Trainer.reps().rangeTop - Trainer.reps().rangeBottom);
+  const leftROM = () => Trainer.rangeOfMotion().left;
+  const rightROM = () => Trainer.rangeOfMotion().right;
 
-  const rightROM = () =>
-    (Trainer.sample().right.position - Trainer.reps().rangeBottom) /
-    (Trainer.reps().rangeTop - Trainer.reps().rangeBottom);
-
-  const currentRep = () => Trainer.repCount() - props.warmupReps;
-  const powerPerRep = createPowerPerRep(props.warmupReps, props.workingReps);
+  const currentRep = () => currentState() === "calibrate" ? -workoutState().context.calibrationRepsRemaining() : workoutState().context.repCount?.();
+  const powerPerRep = () => workoutState().context.repSamples().map(({ concentric }) => 
+    concentric.reduce((max, current) => 
+      Math.max(
+        max, 
+        current.left.velocity * current.left.force + current.right.velocity * current.right.force
+      ),
+      0
+    )
+  );
 
   return (
     <>
       <WorkoutActiveView
         unit={props.unit}
-        exercise={props.exercise}
+        exercise={exercise()}
         video=""
         leftWeight={leftWeight()}
         rightWeight={rightWeight()}
-        targetWeight={props.weight}
+        targetWeight={100}
         powerPerRep={powerPerRep()}
         currentRep={currentRep()}
-        totalReps={props.workingReps}
+        totalReps={10}
         leftROM={leftROM()}
         rightROM={rightROM()}
       />
     </>
   );
-}
-
-function createPowerPerRep(warmupReps, workingReps) {
-  const [repPowers, setRepPowers] = createSignal(
-    new Array(workingReps).fill(0)
-  );
-
-  let currentRepIndex = -Infinity;
-
-  const power = () => {
-    const { left, right } = Trainer.sample();
-    const leftPower = left.velocity * left.force;
-    const rightPower = right.velocity * right.force;
-    return Math.max(0, leftPower + rightPower);
-  };
-
-  createEffect(() => {
-    currentRepIndex = Math.floor(Trainer.repCount() - warmupReps);
-  });
-
-  createEffect(() => {
-    let currentPower = power();
-    if (currentRepIndex >= 0) {
-      let newRepPowers = untrack(repPowers);
-      const prevPower = newRepPowers[currentRepIndex];
-      if (prevPower < currentPower) {
-        newRepPowers = [...newRepPowers];
-        newRepPowers[currentRepIndex] = currentPower;
-        setRepPowers(newRepPowers);
-      }
-    }
-  });
-
-  createEffect(() => {
-    console.log(repPowers());
-  });
-
-  return repPowers;
 }
 
 export namespace WorkoutActiveView {
