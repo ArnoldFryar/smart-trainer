@@ -13,7 +13,7 @@ module.exports = {
     '@storybook/addon-interactions',
   ],
   framework: {
-    name: path.resolve(__dirname, './solid'),
+    name: '@storybook/html-vite',
     options: {},
   },
 };
