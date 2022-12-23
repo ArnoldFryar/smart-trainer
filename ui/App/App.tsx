@@ -1,10 +1,8 @@
 import { Show, createSignal } from 'solid-js';
 import Trainer from '../../services/device/index.js';
-import { WorkoutForm } from '../Workout/WorkoutForm/WorkoutForm.js';
-import { WorkoutActive } from '../Workout/WorkoutActive/WorkoutActive.js';
 import { Button } from '../_common/Elements/Elements.js';
-import { createLocalSignal } from '../../services/util/signals.js';
 import { AppShell } from '../_common/AppShell/AppShell.jsx';
+import { Workout } from '../Workout/Workout.jsx';
 
 export function App() {
   const [workout, setWorkout] = createSignal(false);
@@ -33,10 +31,6 @@ export function App() {
   );
 }
 
-export function AppContainer() {
-  
-}
-
 function ConnectButton() {
   return (
     <Button
@@ -59,37 +53,6 @@ function ConnectButton() {
           : 'Connect'
       }
     </Button>
-  );
-}
-
-function Workout(props: { onExit: () => void }) {
-  const [workoutActive, setWorkoutActive] = createSignal(false);
-
-  return (
-    <>
-      <Button class="absolute top-4 right-4" onClick={() => props.onExit()}>
-        Exit
-      </Button>
-      <Show when={!workoutActive()}>
-        <WorkoutForm
-          connected={Trainer.connected()}
-          onSubmit={async () => {
-            if (!Trainer.connected()) {
-              await Trainer.connect();
-            }
-            setWorkoutActive(Trainer.connected());
-          }}
-        />
-      </Show>
-      <Show when={workoutActive()}>
-        <WorkoutActive
-          unit="lbs"
-          onComplete={() => {
-            props.onExit();
-          }}
-        />
-      </Show>
-    </>
   );
 }
 

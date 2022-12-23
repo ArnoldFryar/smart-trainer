@@ -8,21 +8,33 @@ const MAX_REPS = 255;
 const MAX_WEIGHT = 100;
 
 const EXERCISES = {
-  SQUAT: "SQUAT",
-  BENCH: "BENCH",
+  BACK_SQUAT: "BACK_SQUAT",
+  FLAT_BENCH_PRESS: "FLAT_BENCH_PRESS",
   BARBELL_ROW: "BARBELL_ROW",
   DEADLIFT: "DEADLIFT",
   OVERHEAD_PRESS: "OVERHEAD_PRESS",
-  BICEP_CURL: "BICEP_CURL",
   HIGH_PULL: "HIGH_PULL",
   THRUSTER: "THRUSTER",
+  LUNGES: "LUNGES",
+  BICEP_CURL: "BICEP_CURL",
+  TRICEP_EXTENSION: "TRICEP_EXTENSION",
+  LATERAL_RAISE: "LATERAL_RAISE",
+  REAR_FLY: "REAR_FLY",
+  CHEST_FLY: "CHEST_FLY",
+  CALF_RAISE: "CALF_RAISE",
 }
+
+const PUSH_EXERCISES = [EXERCISES.FLAT_BENCH_PRESS, EXERCISES.OVERHEAD_PRESS];
+const PULL_EXERCISES = [EXERCISES.BARBELL_ROW, EXERCISES.HIGH_PULL];
+const LEG_EXERCISES = [EXERCISES.BACK_SQUAT, EXERCISES.DEADLIFT];
+const ACCESSORY_EXERCISES = [EXERCISES.BICEP_CURL, EXERCISES.TRICEP_EXTENSION, EXERCISES.LATERAL_RAISE, EXERCISES.REAR_FLY, EXERCISES.CHEST_FLY];
 
 const WORKOUT_MODE = {
   STATIC: "STATIC",
   ISOKINETIC: "ISOKINETIC",
   ECCENTRIC: "ECCENTRIC",
   CONCENTRIC: "CONCENTRIC",
+  ASSESSMENT: "ASSESSMENT",
 }
 
 const WORKOUT_LIMIT = {
@@ -36,7 +48,16 @@ export const MODE_HANDLERS = {
     return {
       maxWeight: weight,
       maxWeightIncrease: 0,
-      weightModulation: PRESETS.NEW_SCHOOL,
+      weightModulation: {
+        concentric: {
+          decrease: { minMmS: 0, maxMmS: 20, ramp: 3 },
+          increase: { minMmS: 75, maxMmS: 600, ramp: 0 },
+        },
+        eccentric: {
+          decrease: { minMmS: -1300, maxMmS: -1200, ramp: 100 },
+          increase: { minMmS: -100, maxMmS: -50, ramp: 40 },
+        },
+      },
       calibrationReps: 3.5
     };
   },
@@ -61,10 +82,54 @@ export const MODE_HANDLERS = {
     return {
       maxWeight: weight,
       maxWeightIncrease: 0,
-      weightModulation: PRESETS.ECCENTRIC_ONLY,
+      weightModulation: {
+        concentric: {
+          decrease: { minMmS: 50, maxMmS: 550, ramp: 50 },
+          increase: { minMmS: 650, maxMmS: 750, ramp: 10 },
+        },
+        eccentric: {
+          decrease: { minMmS: -550, maxMmS: -500, ramp: 100 },
+          increase: { minMmS: -100, maxMmS: -50, ramp: 20 },
+        },
+      },
       calibrationReps: 3,
     };
   },
+  [WORKOUT_MODE.CONCENTRIC]: ({ weight }) => {
+    return {
+      maxWeight: weight,
+      maxWeightIncrease: 0,
+      weightModulation: {
+        concentric: {
+          decrease: { minMmS: 0, maxMmS: 20, ramp: 3 },
+          increase: { minMmS: 75, maxMmS: 600, ramp: 0 },
+        },
+        eccentric: {
+          decrease: { minMmS: -1300, maxMmS: -1200, ramp: 100 },
+          increase: { minMmS: -100, maxMmS: -50, ramp: 40 },
+        },
+      },
+      calibrationReps: 3,
+    };
+  },
+  [WORKOUT_MODE.ASSESSMENT]: ({ targetVelocity, e1rm = MAX_WEIGHT }) => {
+    const base = Math.sqrt(e1rm);
+    return {
+      maxWeight: base,
+      maxWeightIncrease: base,
+      weightModulation: {
+        concentric: {
+          decrease: { minMmS: 0, maxMmS: 20, ramp: 3 },
+          increase: { minMmS: targetVelocity, maxMmS: targetVelocity + 300, ramp: 30 },
+        },
+        eccentric: {
+          decrease: { minMmS: -1300, maxMmS: -1200, ramp: 100 },
+          increase: { minMmS: -100, maxMmS: -50, ramp: 1 },
+        },
+      },
+      calibrationReps: 3,
+    };
+  }
 }
 
 export const LIMIT_HANDLERS = {
@@ -181,47 +246,51 @@ export function createSetStorage(db: typeof DB) {
   }
 }
 
+export async function selectExercises() {
+  // TODO: select last exercise of each type from db 
+  // (VERTICAL_PULL, HORIZONTAL_PULL, VERTICAL_PUSH, HORIZONTAL_PUSH, LEGS_SQUAT, LEGS_HINGE)
+  // prefer to keep the same exercise of each type with small chance of changing
+  // chance of changing should increase with time/sets since last change
+  // exercise selection is random, but should follow a distribution set by user preferences
+  // if no exercises have been done in a category, select random exercise in that category
+  // then randomly choose between vertical/horizontal for pull/push and squat/hinge for legs
+  // randomize order of main exercises
+
+  const pull = PULL_EXERCISES[Math.floor(Math.random() * PULL_EXERCISES.length)];
+  const push = PUSH_EXERCISES[Math.floor(Math.random() * PUSH_EXERCISES.length)];
+  const legs = LEG_EXERCISES[Math.floor(Math.random() * LEG_EXERCISES.length)];
+  const main = [pull, push, legs].sort(() => Math.random() - 0.5);
+
+  // TODO: select accessories based on main exercises
+  // accessories should complement main exercises
+  const accessory = [...ACCESSORY_EXERCISES].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  return { main, accessory };
+}
+
 // LENGTH
 // micro: 3 main, 1 accessory, 1 set (4 sets, 1 break, 5 min)
 // short: 3 main, 2 accessory, 3 sets (15 sets, 5 breaks, 20 min)
 // full: 3 main, 3 accessory, 5 sets (30 sets, 9 breaks, 40 min)
-// MAIN EXERCISE
-// push, pull, legs: randomized order
-// random exercies of each type
-export function createWorkoutIterator(db: typeof DB, workoutOptions) {
-  return [{
-    exercise: EXERCISES.SQUAT,
-    mode: WORKOUT_MODE.STATIC,
-    modeConfig: { weight: 20 },
-    limit: WORKOUT_LIMIT.REPS,
-    limitConfig: { reps: 8 },
-  },
-  {
-    exercise: EXERCISES.BENCH,
-    mode: WORKOUT_MODE.STATIC,
-    modeConfig: { weight: 20 },
-    limit: WORKOUT_LIMIT.REPS,
-    limitConfig: { reps: 8 },
-  },
-  {
-    exercise: EXERCISES.DEADLIFT,
-    mode: WORKOUT_MODE.STATIC,
-    modeConfig: { weight: 20 },
-    limit: WORKOUT_LIMIT.REPS,
-    limitConfig: { reps: 8 },
-  },
-  {
-    exercise: EXERCISES.OVERHEAD_PRESS,
-    mode: WORKOUT_MODE.STATIC,
-    modeConfig: { weight: 20 },
-    limit: WORKOUT_LIMIT.REPS,
-    limitConfig: { reps: 8 },
-  },
-  {
-    exercise: EXERCISES.BARBELL_ROW,
-    mode: WORKOUT_MODE.STATIC,
-    modeConfig: { weight: 20 },
-    limit: WORKOUT_LIMIT.REPS,
-    limitConfig: { reps: 8 },
-  }][Symbol.iterator] as any as AsyncIterator<Set>;
+export function * createWorkoutIterator(exercises, db: typeof DB, workoutOptions) {
+  const numSets = workoutOptions.length === "full" ? 5 : workoutOptions.length === "short" ? 3 : 1;
+
+  for (let set = 0; set <= numSets; set++) {
+    for (const exercise of exercises.main) {
+      const isWarmup = (i == 0 && numSets > 1);
+      if (isWarmup) {
+        yield {
+          exercise,
+        }
+      } else {
+        yield {
+          exercise,
+          mode: WORKOUT_MODE.STATIC,
+          modeConfig: { weight: 20 },
+          limit: WORKOUT_LIMIT.REPS,
+          limitConfig: { reps: 8 },
+        }
+      }
+    }
+  }
 }
