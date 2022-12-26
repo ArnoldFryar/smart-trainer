@@ -1,52 +1,67 @@
-import { createSignal, createEffect, createRenderEffect, untrack } from "solid-js";
+import {
+  createSignal,
+  createEffect,
+  createRenderEffect,
+  untrack,
+} from "solid-js";
+import { Sample } from "../device/cables";
 import { promisifyTimeout } from "../util/promisify";
 import { createAbortEffect, reactivePromise } from "../util/signals";
-import { MODE_HANDLERS, LIMIT_HANDLERS, SetConfig, activateSet } from "./index";
+import { MODE_HANDLERS, LIMIT_HANDLERS, SetConfig, activateSet, Set } from "./index";
 
-export function createWorkoutFSM(sets, save) {
-  const [state, setState] = createSignal("calibrating");
+export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
+export type RepSamples = Array<{ concentric?: Sample[], eccentric?: Sample[] }>;
+export function createWorkoutService(sets, save: (set: Set, samples: RepSamples, interrupted?: boolean) => Promise<void>) {
+  const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
-  const [currentSet, setCurrentSet] = createSignal(null);
-  const [repSamples, setRepSamples] = createSignal([]);
+  const [currentSetIndex, setCurrentSetIndex] = createSignal(0);
+  const [currentSet, setCurrentSet] = createSignal<Set>(null);
+  const [repSamples, setRepSamples] = createSignal<RepSamples>([]);
   const currentSetConfig = () => {
     return {
-      ...MODE_HANDLERS[currentSet().value.mode](currentSet().value.modeConfig as any),
-      ...LIMIT_HANDLERS[currentSet().value.limit](currentSet().value.limitConfig as any)
+      ...MODE_HANDLERS[currentSet().mode](
+        currentSet().modeConfig as any
+      ),
+      ...LIMIT_HANDLERS[currentSet().limit](
+        currentSet().limitConfig as any
+      ),
     } as SetConfig;
-  }
+  };
   const calibrationRepsRemaining = () => {
     const { up, down } = Trainer.reps();
     return currentSetConfig().calibrationReps - (up + down) / 2;
-  }
+  };
   const repCount = () => {
     const { up, down } = Trainer.reps();
     return (up + down) / 2 - currentSetConfig().calibrationReps;
-  }
+  };
   const next = async () => {
     saveAndResetSamples();
     setLoading(true);
-    setCurrentSet(await sets.next());
-  }
+    setCurrentSet(await sets[currentSetIndex() + 1]());
+    setCurrentSetIndex(currentSetIndex() + 1);
+  };
   const prev = async () => {
     saveAndResetSamples();
-    setLoading(true);
-    setCurrentSet(await sets.previous());
-  }
+    setLoading(true);    
+    setCurrentSet(await sets[currentSetIndex() - 1]());
+    setCurrentSetIndex(currentSetIndex() - 1);
+  };
   const pause = () => {
-    saveAndResetSamples();
+    saveAndResetSamples(true);
     setState("paused");
     Trainer.stop();
-  }
+  };
   const resume = () => {
     saveAndResetSamples();
     setState("calibrating");
-  }
-  const saveAndResetSamples = () => {
+  };
+  const saveAndResetSamples = (interrupted?: boolean) => {
     if (repSamples().length > 0) {
-      save(currentSet(), repSamples())
+      save(currentSet(), repSamples(), interrupted);
     }
     setRepSamples([]);
-  }
+  };
 
   createRenderEffect(() => {
     const rep = repCount();
@@ -55,8 +70,10 @@ export function createWorkoutFSM(sets, save) {
       const newSample = Trainer.sample();
       const existingSamples = untrack(repSamples);
       const newSamples = [...existingSamples];
-      const currentRep = newSamples[rep] = newSamples[rep] ?? {};
-      currentRep[phase] = currentRep[phase] ? [...currentRep[phase], newSample] : [newSample];
+      const currentRep = (newSamples[rep] = newSamples[rep] ?? {});
+      currentRep[phase] = currentRep[phase]
+        ? [...currentRep[phase], newSample]
+        : [newSample];
       setRepSamples(newSamples);
     }
   });
@@ -72,7 +89,7 @@ export function createWorkoutFSM(sets, save) {
         setState("calibrating");
 
         await activateSet(currentSetConfig());
-        
+
         setLoading(false);
 
         await reactivePromise((resolve) => {
@@ -81,25 +98,52 @@ export function createWorkoutFSM(sets, save) {
               resolve();
             }
           });
-        }, aborted)
+        }, aborted);
 
         setState("workout");
 
         await currentSetConfig().limit(repCount, repSamples, aborted);
         await Trainer.stop();
 
-        if (currentSet().done) {
+        if (currentSetIndex() === sets.length - 1) {
           saveAndResetSamples();
           setState("complete");
         } else {
           setState("rest");
-          await promisifyTimeout(currentSet().value.rest ?? 10000)
+          await promisifyTimeout(currentSet().rest ?? 10000);
           next();
         }
-      })
+      });
     }
-  })
+  });
 
-  
-  return { state, loading, currentSet, currentSetConfig, repSamples, repCount, calibrationRepsRemaining, next, prev, pause, resume };
+  return [
+    {
+      get state() {
+        return state();
+      },
+      get loading() {
+        return loading();
+      },
+      get currentSet() {
+        return currentSet();
+      },
+      get currentSetIndex() {
+        return currentSetIndex();
+      },
+      get currentSetConfig() {
+        return currentSetConfig();
+      },
+      get repSamples() {
+        return repSamples();
+      },
+      get repCount() {
+        return repCount();
+      },
+      get calibrationRepsRemaining() {
+        return calibrationRepsRemaining();
+      }
+    },
+    { next, prev, pause, resume },
+  ] as const;
 }

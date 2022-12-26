@@ -5,7 +5,7 @@ import { selectExercises } from '../../services/workout/index.js';
 import { Button } from '../_common/Elements/Elements.js';
 
 export function Workout(props: { onExit: () => void }) {
-  const [workoutActive, setWorkoutActive] = createSignal(false);
+  const [workoutConfig, setWorkoutConfig] = createSignal(null);
   const [exercises] = createResource(() => selectExercises());
 
   return (
@@ -13,21 +13,21 @@ export function Workout(props: { onExit: () => void }) {
       <Button class="absolute top-4 right-4" onClick={() => props.onExit()}>
         Exit
       </Button>
-      <Show when={!workoutActive()}>
+      <Show when={!workoutConfig()}>
         <WorkoutForm
           connected={Trainer.connected()}
           exercises={exercises()}
-          onSubmit={async () => {
+          onSubmit={async (config) => {
             if (!Trainer.connected()) {
               await Trainer.connect();
             }
-            setWorkoutActive(Trainer.connected());
+            setWorkoutConfig(config);
           }}
         />
       </Show>
-      <Show when={workoutActive()}>
+      <Show when={workoutConfig()}>
         <WorkoutActive
-          unit="lbs"
+          config={workoutConfig()}
           onComplete={() => {
             props.onExit();
           }}

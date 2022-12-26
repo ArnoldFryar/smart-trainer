@@ -3,6 +3,7 @@ import type DB from "../db/settings.js";
 import { promisifyTimeout } from "../util/promisify.js";
 import { reactivePromise } from '../util/signals.js';
 import { Accessor, createEffect } from "solid-js";
+import { RepSamples } from "./hook";
 
 const MAX_REPS = 255;
 const MAX_WEIGHT = 100;
@@ -153,7 +154,7 @@ export const LIMIT_HANDLERS = {
       limit: () => promisifyTimeout(time)
     };
   },
-  [WORKOUT_LIMIT.VELOCITY]: ({ velocity }) => {
+  [WORKOUT_LIMIT.VELOCITY]: ({ stopVelocity }) => {
     return {
       reps: MAX_REPS,
       limit: (repCount, repSamples, aborted) => {
@@ -161,7 +162,7 @@ export const LIMIT_HANDLERS = {
           const lastRep = () => repSamples()[repCount() - 1];
           const lastRepMeanVelocity = () => lastRep().concentric.reduce((acc, curr) => acc + curr, 0) / lastRep().concentric.length;
           createEffect(() => {
-            if (lastRepMeanVelocity() <= velocity) {
+            if (lastRepMeanVelocity() <= stopVelocity) {
               resolve();
             }
           })
@@ -272,25 +273,34 @@ export async function selectExercises() {
 // micro: 3 main, 1 accessory, 1 set (4 sets, 1 break, 5 min)
 // short: 3 main, 2 accessory, 3 sets (15 sets, 5 breaks, 20 min)
 // full: 3 main, 3 accessory, 5 sets (30 sets, 9 breaks, 40 min)
-export function * createWorkoutIterator(exercises, db: typeof DB, workoutOptions) {
-  const numSets = workoutOptions.length === "full" ? 5 : workoutOptions.length === "short" ? 3 : 1;
+export function createWorkoutIterator({ length, exercises, targetVelocity, stopVelocity }, db?: typeof DB) {
+  const numSets = length === "full" ? 5 : length === "short" ? 3 : 1;
+  const exerciseWeights = new Map();
 
-  for (let set = 0; set <= numSets; set++) {
-    for (const exercise of exercises.main) {
-      const isWarmup = (i == 0 && numSets > 1);
-      if (isWarmup) {
-        yield {
-          exercise,
-        }
-      } else {
-        yield {
-          exercise,
-          mode: WORKOUT_MODE.STATIC,
-          modeConfig: { weight: 20 },
-          limit: WORKOUT_LIMIT.REPS,
-          limitConfig: { reps: 8 },
-        }
-      }
+  const sets = [];
+  const save = (set, samples: RepSamples, interrupted) => {
+    if (!interrupted && !exerciseWeights.has(set.exercise)) {
+      const maxWeight = Math.max(...samples.flatMap(s => s.concentric.map(c => c.left.force + c.right.force)));
+      exerciseWeights.set(set.exercise, maxWeight);
     }
   }
+
+  for (let setIndex = 0; setIndex <= numSets; setIndex++) {
+    for (let exerciseIndex = 0; exerciseIndex < exercises.main.length; exerciseIndex++) {
+      const exercise = exercises.main[exerciseIndex];
+      sets.push(() => {
+        const weight = exerciseWeights.get(exercise);
+        return {
+          exercise,
+          mode: weight ? WORKOUT_MODE.STATIC : WORKOUT_MODE.ASSESSMENT,
+          modeConfig: { weight, targetVelocity },
+          limit: WORKOUT_LIMIT.VELOCITY,
+          limitConfig: { stopVelocity },
+          rest: exerciseIndex % exercises.main.length === 0 ? 60000 : 30000,
+        }
+      });
+    }
+  }
+
+  return [sets, save];
 }
