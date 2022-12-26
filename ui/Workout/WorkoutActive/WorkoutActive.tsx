@@ -220,11 +220,15 @@ namespace Reps {
   }
 }
 
+const CURVE_THRESHOLD = 0.2;
+
 export function Reps(props: Reps.Props) {
-  const maxVelocity = () =>
-    Math.max(props.targetVelocity, ...props.meanVelocityPerRep);
-  const targetPercent = () => (props.targetVelocity / maxVelocity()) * 100;
-  const stopPercent = () => (props.stopVelocity / maxVelocity()) * 100;
+  const softMax = props.targetVelocity + props.stopVelocity;
+  const k = Math.log(1/CURVE_THRESHOLD - 1) / (props.stopVelocity/softMax * 2 - 1);
+  const sCurve = (x: number) => 1 / (1 + Math.exp(k * (x / softMax * 2 - 1)));
+  const maxValue = () => sCurve(Math.max(props.targetVelocity, ...props.meanVelocityPerRep));
+  const getValue = (x: number) => sCurve(x) / maxValue() * 100;
+  
   return (
     <>
       <div
@@ -238,20 +242,18 @@ export function Reps(props: Reps.Props) {
                 class={`m-1 flex-1 bg-primary-700 rounded -skew-x-6 bg-gradient-to-b from-primary-100 via-primary-300 to-primary-500 shadow-lg shadow-primary-500/30 border border-primary-400 ${
                   index() > props.currentRep ? "opacity-25" : ""
                 }`}
-                style={`max-width:25%; height: ${
-                  (velocity / maxVelocity()) * 100
-                }%`}
+                style={`max-width:25%; height: ${getValue(velocity)}%`}
               />
             )}
           </For>
         </Show>
         <div
           class={`absolute m-1 flex-1 border-t border-primary-400/50`}
-          style={`height: ${targetPercent()}%; width:100%;`}
+          style={`height: ${getValue(props.targetVelocity)}%; width:100%;`}
         />
         <div
-          class={`absolute m-1 flex-1 border-t-4 border-secondary-400`}
-          style={`height: ${stopPercent()}%; width:100%;`}
+          class={`absolute m-1 flex-1 border-t-2 border-secondary-400`}
+          style={`height: ${getValue(props.stopVelocity)}%; width:100%;`}
         />
       </div>
       <div class="text-right mt-8">
