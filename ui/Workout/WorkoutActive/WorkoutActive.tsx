@@ -25,7 +25,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
   });
   const [workoutState, actions] = createWorkoutService(sets, save);
 
-  const exercise = () => workoutState.currentSet.value.exercise;
+  const exercise = () => workoutState.currentSet.exercise;
 
   const leftWeight = () => {
     const { left } = Trainer.sample();
@@ -124,7 +124,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
       </Show>
       <Show when={active()}>
         <WorkoutActiveContainer
-          unit={"lbs" /* TODO: get from user preferences */}
+          unit={props.unit}
           exercise={props.exercise}
           video=""
           leftWeight={props.leftWeight}

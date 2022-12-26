@@ -302,5 +302,5 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
     }
   }
 
-  return [sets, save];
+  return [sets, save] as const;
 }

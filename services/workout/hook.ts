@@ -11,7 +11,7 @@ import { MODE_HANDLERS, LIMIT_HANDLERS, SetConfig, activateSet, Set } from "./in
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
 export type RepSamples = Array<{ concentric?: Sample[], eccentric?: Sample[] }>;
-export function createWorkoutService(sets, save: (set: Set, samples: RepSamples, interrupted?: boolean) => Promise<void>) {
+export function createWorkoutService(sets, save: (set: Set, samples: RepSamples, interrupted?: boolean) => void) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
   const [currentSetIndex, setCurrentSetIndex] = createSignal(0);
