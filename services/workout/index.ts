@@ -247,6 +247,13 @@ export function createSetStorage(db: typeof DB) {
   }
 }
 
+export type WorkoutConfig = {
+  length: "full" | "short" | "mini";
+  exercises: { main: string[], accessory: string[] };
+  targetVelocity: number;
+  stopVelocity: number;
+}
+
 export async function selectExercises() {
   // TODO: select last exercise of each type from db 
   // (VERTICAL_PULL, HORIZONTAL_PULL, VERTICAL_PUSH, HORIZONTAL_PUSH, LEGS_SQUAT, LEGS_HINGE)
@@ -273,12 +280,12 @@ export async function selectExercises() {
 // micro: 3 main, 1 accessory, 1 set (4 sets, 1 break, 5 min)
 // short: 3 main, 2 accessory, 3 sets (15 sets, 5 breaks, 20 min)
 // full: 3 main, 3 accessory, 5 sets (30 sets, 9 breaks, 40 min)
-export function createWorkoutIterator({ length, exercises, targetVelocity, stopVelocity }, db?: typeof DB) {
+export function createWorkoutIterator({ length, exercises, targetVelocity, stopVelocity }: WorkoutConfig, db?: typeof DB) {
   const numSets = length === "full" ? 5 : length === "short" ? 3 : 1;
   const exerciseWeights = new Map();
 
   const sets = [];
-  const save = (set, samples: RepSamples, interrupted) => {
+  const save = (set, samples: RepSamples, interrupted: boolean) => {
     if (!interrupted && !exerciseWeights.has(set.exercise)) {
       const maxWeight = Math.max(...samples.flatMap(s => s.concentric.map(c => c.left.force + c.right.force)));
       exerciseWeights.set(set.exercise, maxWeight);

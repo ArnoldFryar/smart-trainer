@@ -3,6 +3,7 @@ import {
   createEffect,
   createRenderEffect,
   untrack,
+  createResource,
 } from "solid-js";
 import { Sample } from "../device/cables";
 import { promisifyTimeout } from "../util/promisify";
@@ -11,11 +12,11 @@ import { MODE_HANDLERS, LIMIT_HANDLERS, SetConfig, activateSet, Set } from "./in
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
 export type RepSamples = Array<{ concentric?: Sample[], eccentric?: Sample[] }>;
-export function createWorkoutService(sets, save: (set: Set, samples: RepSamples, interrupted?: boolean) => void) {
+export function createWorkoutService(sets: Array<() => Promise<Set>>, save: (set: Set, samples: RepSamples, interrupted?: boolean) => void) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
   const [currentSetIndex, setCurrentSetIndex] = createSignal(0);
-  const [currentSet, setCurrentSet] = createSignal<Set>(null);
+  const [currentSet] = createResource<Set, number>(currentSetIndex, (i) => sets[i]())
   const [repSamples, setRepSamples] = createSignal<RepSamples>([]);
   const currentSetConfig = () => {
     return {
@@ -38,13 +39,11 @@ export function createWorkoutService(sets, save: (set: Set, samples: RepSamples,
   const next = async () => {
     saveAndResetSamples();
     setLoading(true);
-    setCurrentSet(await sets[currentSetIndex() + 1]());
     setCurrentSetIndex(currentSetIndex() + 1);
   };
   const prev = async () => {
     saveAndResetSamples();
     setLoading(true);    
-    setCurrentSet(await sets[currentSetIndex() - 1]());
     setCurrentSetIndex(currentSetIndex() - 1);
   };
   const pause = () => {

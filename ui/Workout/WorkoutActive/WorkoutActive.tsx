@@ -10,7 +10,10 @@ import { createWorkoutIterator } from "../../../services/workout/index.js";
 
 export namespace WorkoutActive {
   export interface Props {
-    config: { exercises: {}; length: string };
+    config: {
+      exercises: { main: string[]; accessory: string[] };
+      length: "full" | "short" | "mini";
+    };
     onComplete: () => void;
   }
 }
@@ -224,11 +227,14 @@ const CURVE_THRESHOLD = 0.2;
 
 export function Reps(props: Reps.Props) {
   const softMax = props.targetVelocity + props.stopVelocity;
-  const k = Math.log(1/CURVE_THRESHOLD - 1) / (props.stopVelocity/softMax * 2 - 1);
-  const sCurve = (x: number) => 1 / (1 + Math.exp(k * (x / softMax * 2 - 1)));
-  const maxValue = () => sCurve(Math.max(props.targetVelocity, ...props.meanVelocityPerRep));
-  const getValue = (x: number) => sCurve(x) / maxValue() * 100;
-  
+  const k =
+    Math.log(1 / CURVE_THRESHOLD - 1) /
+    ((props.stopVelocity / softMax) * 2 - 1);
+  const sCurve = (x: number) => 1 / (1 + Math.exp(k * ((x / softMax) * 2 - 1)));
+  const maxValue = () =>
+    sCurve(Math.max(props.targetVelocity, ...props.meanVelocityPerRep));
+  const getValue = (x: number) => (sCurve(x) / maxValue()) * 100;
+
   return (
     <>
       <div
@@ -245,9 +251,7 @@ export function Reps(props: Reps.Props) {
                   }`}
                   style={`height: ${getValue(velocity)}%`}
                 />
-                <div
-                  class={`z-10 flex-initial w-6`}
-                />
+                <div class={`z-10 flex-initial w-6`} />
               </>
             )}
           </For>
