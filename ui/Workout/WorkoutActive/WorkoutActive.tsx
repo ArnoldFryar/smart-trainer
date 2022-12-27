@@ -238,21 +238,30 @@ export function Reps(props: Reps.Props) {
         <Show when={props.currentRep >= 0}>
           <For each={props.meanVelocityPerRep}>
             {(velocity: number, index) => (
-              <div
-                class={`m-1 flex-1 bg-primary-700 rounded -skew-x-6 bg-gradient-to-b from-primary-100 via-primary-300 to-primary-500 shadow-lg shadow-primary-500/30 border border-primary-400 ${
-                  index() > props.currentRep ? "opacity-25" : ""
-                }`}
-                style={`max-width:25%; height: ${getValue(velocity)}%`}
-              />
+              <>
+                <div
+                  class={`z-10 flex-initial w-12 bg-primary-400 rounded-sm -skew-x-6 bg-gradient-to-b from-primary-400 to-primary-500 shadow-lg shadow-primary-900/50 ${
+                    index() > props.currentRep ? "opacity-25" : ""
+                  }`}
+                  style={`height: ${getValue(velocity)}%`}
+                />
+                <div
+                  class={`z-10 flex-initial w-6`}
+                />
+              </>
             )}
           </For>
         </Show>
         <div
-          class={`absolute m-1 flex-1 border-t border-primary-400/50`}
+          class={`absolute z-20 m-1 flex-1 border-t border-white/30`}
           style={`height: ${getValue(props.targetVelocity)}%; width:100%;`}
         />
         <div
-          class={`absolute m-1 flex-1 border-t-2 border-secondary-400`}
+          class={`absolute z-20 m-1 flex-1 border-t border-white/60`}
+          style={`height: ${getValue(props.stopVelocity)}%; width:100%;`}
+        />
+        <div
+          class={`absolute z-0 m-1 flex-1 border-t border-white`}
           style={`height: ${getValue(props.stopVelocity)}%; width:100%;`}
         />
       </div>

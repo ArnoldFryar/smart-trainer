@@ -78,24 +78,24 @@ export function RangeOfMotion(props: RangeOfMotion.Props) {
       <Circle stroke='hsl(var(--gray-700))' direction={1} percent={1} />
       <Circle stroke='hsl(var(--gray-700))' direction={-1} percent={1} />
       <Circle
-        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-800))'}
+        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-800))' : 'hsl(var(--secondary-900))'}
         direction={1}
         percent={props.leftROM}
         filter="url(#f2)"
       />
       <Circle
-        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-800))'}
+        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-800))' : 'hsl(var(--secondary-900))'}
         direction={-1}
         percent={props.rightROM}
         filter="url(#f2)"
       />
       <Circle
-        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-100))' : 'hsl(var(--secondary-600))'}
+        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-600))'}
         direction={1}
         percent={props.leftROM}
       />
       <Circle
-        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-100))' : 'hsl(var(--secondary-600))'}
+        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-600))'}
         direction={-1}
         percent={props.rightROM}
       />
