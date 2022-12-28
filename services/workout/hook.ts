@@ -63,11 +63,11 @@ export function createWorkoutService(sets: Array<() => Promise<Set>>, save: (set
   };
 
   createRenderEffect(() => {
-    const rep = repCount();
-    if (rep >= 0) {
+    const rep = Math.floor(repCount());
+    const existingSamples = untrack(repSamples);
+    if (rep >= 0 && rep <= existingSamples.length) {
       const phase = Trainer.phase();
       const newSample = Trainer.sample();
-      const existingSamples = untrack(repSamples);
       const newSamples = [...existingSamples];
       const currentRep = (newSamples[rep] = newSamples[rep] ?? {});
       currentRep[phase] = currentRep[phase]

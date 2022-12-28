@@ -7,6 +7,7 @@ import { ExerciseDemonstration } from "../ExerciseDemonstration/ExerciseDemonstr
 import { Button } from "../../_common/Elements/Elements.js";
 import { createWorkoutService } from "../../../services/workout/hook.js";
 import { createWorkoutIterator } from "../../../services/workout/index.js";
+import { calculateMeanVelocity } from "../../../services/workout/util.js";
 
 export namespace WorkoutActive {
   export interface Props {
@@ -19,8 +20,8 @@ export namespace WorkoutActive {
 }
 
 export function WorkoutActive(props: WorkoutActive.Props) {
-  const targetVelocity = 0.6;
-  const stopVelocity = 0.4;
+  const targetVelocity = 600;
+  const stopVelocity = targetVelocity*0.75;
   const [sets, save] = createWorkoutIterator({
     ...props.config,
     targetVelocity,
@@ -47,15 +48,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     workoutState.state === "calibrating"
       ? -workoutState.calibrationRepsRemaining
       : workoutState.repCount;
-  const meanVelocityPerRep = () =>
-    workoutState.repSamples.map(
-      ({ concentric }) =>
-        concentric.reduce(
-          (sum, current) =>
-            sum + (current.left.velocity + current.right.velocity) / 2,
-          0
-        ) / concentric.length
-    );
+  const meanVelocityPerRep = () => workoutState.repSamples.map(({ concentric }) => calculateMeanVelocity(concentric));
 
   return (
     <WorkoutActiveView
