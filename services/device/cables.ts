@@ -22,12 +22,12 @@ export function parseSample(dataview?: DataView): Sample {
   return {
     time: dataview.getUint32(0, true),
     left: {
-      position: dataview.getInt16(4, true),
+      position: dataview.getInt16(4, true) / 10,
       velocity: dataview.getInt16(6, true),
       force: dataview.getInt16(8, true) / 100,
     },
     right: {
-      position: dataview.getInt16(10, true),
+      position: dataview.getInt16(10, true) / 10,
       velocity: dataview.getInt16(12, true),
       force: dataview.getInt16(14, true) / 100,
     },
