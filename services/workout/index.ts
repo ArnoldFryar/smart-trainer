@@ -43,6 +43,8 @@ const WORKOUT_LIMIT = {
   REPS: "REPS",
   TIME: "TIME",
   VELOCITY: "VELOCITY",
+  NO_INCREASE: "NO_INCREASE",
+  FAILURE: "FAILURE",
 }
 
 export const MODE_HANDLERS = {
@@ -115,13 +117,13 @@ export const MODE_HANDLERS = {
     };
   },
   [WORKOUT_MODE.ASSESSMENT]: ({ targetVelocity }) => {
-    const RATE = 15;
+    const RATE = 8;
     return {
       maxWeight: 20,
       maxWeightIncrease: 20,
       weightModulation: {
         concentric: {
-          decrease: { minMmS: 50, maxMmS: targetVelocity/2, ramp: RATE/2 },
+          decrease: { minMmS: 0, maxMmS: 0, ramp: 0 },
           increase: { minMmS: targetVelocity, maxMmS: 1500, ramp: RATE },
         },
         eccentric: {
@@ -155,18 +157,41 @@ export const LIMIT_HANDLERS = {
       limit: () => promisifyTimeout(time)
     };
   },
-  [WORKOUT_LIMIT.VELOCITY]: ({ stopVelocity }) => {
+  [WORKOUT_LIMIT.VELOCITY]: ({ velocityThreshold = 0.8, minReps = 2 }) => {
     return {
       reps: MAX_REPS,
       limit: (repCount, repSamples, aborted) => {
         return reactivePromise((resolve) => {
-          const prevRep = (i: number) => repSamples()[repCount() - i];
-          const prevRepMeanVelocity = (i: number) => prevRep(i) 
+          const repVelocities = () => repSamples().map((rep) => calculateMeanVelocity(rep.concentric));
+          const bestVelocity = () => Math.max(...repVelocities());
+          const lastVelocity = () => repVelocities()[Math.floor(repCount() - 1)];
+          createEffect(() => {
+            if (repCount() > minReps && lastVelocity() < bestVelocity() * velocityThreshold) {
+              resolve();
+            }
+          })
+        }, aborted)
+      }
+    } as SetConfig;
+  },
+  [WORKOUT_LIMIT.NO_INCREASE]: ({ stopVelocity, minReps = 2, forceThreshold = 0.1 }) => {
+    return {
+      reps: MAX_REPS,
+      limit: (repCount, repSamples, aborted) => {
+        return reactivePromise((resolve) => {
+          const prevRep = (i: number) => repSamples()[Math.floor(repCount() - i)];
+          const prevForce = (i: number) => Math.max(...prevRep(i).concentric.map(c => Math.max(c.left.force, c.right.force)));
+          const prevMeanVelocity = (i: number) => prevRep(i) 
             ? calculateMeanVelocity(prevRep(i).concentric)
             : Infinity;
           createEffect(() => {
-            if (prevRepMeanVelocity(1) <= stopVelocity && prevRepMeanVelocity(2) <= stopVelocity) {
-              resolve();
+            if (repCount() >= minReps) {
+              const difference = repCount() >= 3 ? Math.abs(prevForce(1) - prevForce(2)) : Infinity;
+              if (difference <= forceThreshold) {
+                resolve();
+              } else if (prevMeanVelocity(1) <= stopVelocity) {
+                resolve();
+              }
             }
           })
         }, aborted)
@@ -291,8 +316,13 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
   const save = (set, samples: RepSamples, interrupted: boolean) => {
     localStorage.setItem("workoutSets", JSON.stringify(JSON.parse(localStorage.getItem("workoutSets") ?? "[]").concat({ set, samples, interrupted }).slice(-1000)));
     if (!interrupted && !exerciseWeights.has(set.exercise)) {
-      const maxWeight = Math.max(...samples.filter(s => s.concentric).flatMap(s => s.concentric.map(c => Math.max(c.left.force, c.right.force))));
-      exerciseWeights.set(set.exercise, maxWeight);
+      const previousRepForces = samples.filter(s => s.concentric).map(s => s.concentric).reverse()[1].map(c => Math.max(c.left.force, c.right.force));
+      const min = Math.min(...previousRepForces);
+      const max = Math.max(...previousRepForces);
+      const mean = previousRepForces.reduce((a, b) => a + b, 0) / previousRepForces.length;
+      const median = previousRepForces.sort((a, b) => a - b)[Math.floor(previousRepForces.length / 2)];
+      console.log({ min, max, mean, median, previousRepForces});
+      exerciseWeights.set(set.exercise, mean);
     }
   }
 
@@ -305,8 +335,8 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
           exercise,
           mode: weight ? WORKOUT_MODE.STATIC : WORKOUT_MODE.ASSESSMENT,
           modeConfig: { weight, targetVelocity },
-          limit: WORKOUT_LIMIT.VELOCITY,
-          limitConfig: { stopVelocity: weight ? stopVelocity : targetVelocity },
+          limit: weight ? WORKOUT_LIMIT.VELOCITY : WORKOUT_LIMIT.NO_INCREASE,
+          limitConfig: { stopVelocity: targetVelocity },
           rest: exerciseIndex % exercises.main.length === 0 ? 10000 : 10000,
         }
       });
