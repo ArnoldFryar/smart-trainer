@@ -42,8 +42,8 @@ const WORKOUT_MODE = {
 const WORKOUT_LIMIT = {
   REPS: "REPS",
   TIME: "TIME",
-  VELOCITY: "VELOCITY",
-  NO_INCREASE: "NO_INCREASE",
+  VELOCITY_LOSS: "VELOCITY_LOSS",
+  ASSESSMENT: "ASSESSMENT",
   FAILURE: "FAILURE",
 }
 
@@ -157,7 +157,7 @@ export const LIMIT_HANDLERS = {
       limit: () => promisifyTimeout(time)
     };
   },
-  [WORKOUT_LIMIT.VELOCITY]: ({ velocityThreshold = 0.8, minReps = 2 }) => {
+  [WORKOUT_LIMIT.VELOCITY_LOSS]: ({ velocityThreshold = 0.8, minReps = 2 }) => {
     return {
       reps: MAX_REPS,
       limit: (repCount, repSamples, aborted) => {
@@ -174,7 +174,7 @@ export const LIMIT_HANDLERS = {
       }
     } as SetConfig;
   },
-  [WORKOUT_LIMIT.NO_INCREASE]: ({ stopVelocity, minReps = 2, forceThreshold = 0.1 }) => {
+  [WORKOUT_LIMIT.ASSESSMENT]: ({ stopVelocity, minReps = 2, forceThreshold = 0.1 }) => {
     return {
       reps: MAX_REPS,
       limit: (repCount, repSamples, aborted) => {
@@ -226,7 +226,7 @@ export type Set = {
   limit: typeof WORKOUT_LIMIT["TIME"],
   limitConfig: { time: number },  
 } | {
-  limit: typeof WORKOUT_LIMIT["VELOCITY"],
+  limit: typeof WORKOUT_LIMIT["VELOCITY_LOSS"],
   limitConfig: { velocity: number },
 })
 
@@ -335,7 +335,7 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
           exercise,
           mode: weight ? WORKOUT_MODE.STATIC : WORKOUT_MODE.ASSESSMENT,
           modeConfig: { weight, targetVelocity },
-          limit: weight ? WORKOUT_LIMIT.VELOCITY : WORKOUT_LIMIT.NO_INCREASE,
+          limit: weight ? WORKOUT_LIMIT.VELOCITY_LOSS : WORKOUT_LIMIT.ASSESSMENT,
           limitConfig: { stopVelocity: targetVelocity },
           rest: exerciseIndex % exercises.main.length === 0 ? 10000 : 10000,
         }
