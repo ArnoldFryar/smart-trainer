@@ -66,10 +66,20 @@ export function createWorkoutService(sets: Array<() => Promise<Set>>, save: (set
     const rep = Math.floor(repCount());
     const existingSamples = untrack(repSamples);
     if (rep >= 0 && rep <= existingSamples.length) {
-      const phase = Trainer.phase();
+      let phase = Trainer.phase();
       const newSample = Trainer.sample();
       const newSamples = [...existingSamples];
-      const currentRep = (newSamples[rep] = newSamples[rep] ?? {});
+      let currentRep = (newSamples[rep] = newSamples[rep] ?? {});
+      // if the trainer says we're in the concentric phase, 
+      // but we're still going down, treat it as eccentric
+      if (phase === "concentric" && !currentRep.concentric && (newSample.left.velocity + newSample.right.velocity) < 0) {
+        phase = "eccentric";
+        if (!currentRep.eccentric) {
+          // if the current rep doesn't have an eccentric phase,
+          // we need to put this sample in the previous rep
+          currentRep = newSamples[rep - 1] ?? {};
+        }
+      }
       currentRep[phase] = currentRep[phase]
         ? [...currentRep[phase], newSample]
         : [newSample];
