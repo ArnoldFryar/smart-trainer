@@ -27,7 +27,7 @@ const EXERCISES = {
 }
 
 const PUSH_EXERCISES = [EXERCISES.FLAT_BENCH_PRESS, EXERCISES.OVERHEAD_PRESS];
-const PULL_EXERCISES = [EXERCISES.BARBELL_ROW, EXERCISES.HIGH_PULL];
+const PULL_EXERCISES = [EXERCISES.BARBELL_ROW/*, EXERCISES.HIGH_PULL*/];
 const LEG_EXERCISES = [EXERCISES.BACK_SQUAT, EXERCISES.DEADLIFT];
 const ACCESSORY_EXERCISES = [EXERCISES.BICEP_CURL, EXERCISES.TRICEP_EXTENSION, EXERCISES.LATERAL_RAISE, EXERCISES.REAR_FLY, EXERCISES.CHEST_FLY];
 
@@ -305,11 +305,12 @@ export async function selectExercises() {
 }
 
 // LENGTH
-// micro: 3 main, 1 accessory, 1 set (4 sets, 1 break, 5 min)
+// micro: 2 main, 2 set (4 sets, 1 break, 5 min)
 // short: 3 main, 2 accessory, 3 sets (15 sets, 5 breaks, 20 min)
 // full: 3 main, 3 accessory, 5 sets (30 sets, 9 breaks, 40 min)
 export function createWorkoutIterator({ length, exercises, targetVelocity, stopVelocity }: WorkoutConfig, db?: typeof DB) {
   const numSets = length === "full" ? 5 : length === "short" ? 3 : 2;
+  const setExercises = exercises.main.slice(0, length === "mini" ? 2 : 3)
   const exerciseWeights = new Map();
 
   const sets = [];
@@ -327,8 +328,8 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
   }
 
   for (let setIndex = 0; setIndex < numSets; setIndex++) {
-    for (let exerciseIndex = 0; exerciseIndex < 1 /* exercises.main.length */; exerciseIndex++) {
-      const exercise = exercises.main[exerciseIndex];
+    for (let exerciseIndex = 0; exerciseIndex < setExercises.length; exerciseIndex++) {
+      const exercise = setExercises[exerciseIndex];
       sets.push(() => {
         const weight = exerciseWeights.get(exercise);
         return {
@@ -337,7 +338,7 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
           modeConfig: { weight, targetVelocity },
           limit: weight ? WORKOUT_LIMIT.VELOCITY_LOSS : WORKOUT_LIMIT.ASSESSMENT,
           limitConfig: { stopVelocity: targetVelocity },
-          rest: exerciseIndex % exercises.main.length === 0 ? 10000 : 10000,
+          rest: exerciseIndex % setExercises.length === 0 ? 10000 : 10000,
         }
       });
     }
