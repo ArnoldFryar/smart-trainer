@@ -119,8 +119,8 @@ export const MODE_HANDLERS = {
   [WORKOUT_MODE.ASSESSMENT]: ({ targetVelocity }) => {
     const RATE = 8;
     return {
-      maxWeight: 20,
-      maxWeightIncrease: 20,
+      maxWeight: MAX_WEIGHT,
+      maxWeightIncrease: 0,
       weightModulation: {
         concentric: {
           decrease: { minMmS: 0, maxMmS: 0, ramp: 0 },
