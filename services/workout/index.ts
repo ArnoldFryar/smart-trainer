@@ -207,6 +207,7 @@ export type Set = {
   modeConfig: object,
   limit: keyof typeof WORKOUT_LIMIT;
   limitConfig: object;
+  user: { hue: number }
 } & ({
   mode: typeof WORKOUT_MODE["STATIC"],
   modeConfig: { weight: number },
@@ -277,6 +278,8 @@ export function createSetStorage(db: typeof DB) {
 
 export type WorkoutConfig = {
   length: "full" | "short" | "mini";
+  superset: boolean;
+  users: number;
   exercises: { main: string[], accessory: string[] };
   targetVelocity: number;
   stopVelocity: number;
@@ -308,10 +311,11 @@ export async function selectExercises() {
 // micro: 2 main, 2 set (4 sets, 1 break, 5 min)
 // short: 3 main, 2 accessory, 3 sets (15 sets, 5 breaks, 20 min)
 // full: 3 main, 3 accessory, 5 sets (30 sets, 9 breaks, 40 min)
-export function createWorkoutIterator({ length, exercises, targetVelocity, stopVelocity }: WorkoutConfig, db?: typeof DB) {
+export function createWorkoutIterator({ length, exercises, superset, users, targetVelocity, stopVelocity }: WorkoutConfig, db?: typeof DB) {
   const numSets = length === "full" ? 5 : length === "short" ? 3 : 2;
   const setExercises = exercises.main.slice(0, length === "mini" ? 2 : 3)
   const exerciseWeights = new Map();
+  const userData = [{ hue: 345 }, { hue: 190 }, { hue: 50 }];
 
   const sets = [];
   const save = (set, samples: RepSamples, interrupted: boolean) => {
@@ -327,13 +331,14 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
     }
   }
 
-  for (let setIndex = 0; setIndex < numSets; setIndex++) {
-    for (let exerciseIndex = 0; exerciseIndex < setExercises.length; exerciseIndex++) {
-      const exercise = setExercises[exerciseIndex];
+  const addSet = (exerciseIndex: number, setIndex: number) => {
+    const exercise = setExercises[exerciseIndex];
+    for (let userIndex = 0; userIndex < users; userIndex++) {
       sets.push(() => {
         const weight = exerciseWeights.get(exercise);
         return {
           exercise,
+          user: userData[userIndex],
           mode: weight ? WORKOUT_MODE.STATIC : WORKOUT_MODE.ASSESSMENT,
           modeConfig: { weight, targetVelocity },
           limit: weight ? WORKOUT_LIMIT.VELOCITY_LOSS : WORKOUT_LIMIT.ASSESSMENT,
@@ -341,6 +346,20 @@ export function createWorkoutIterator({ length, exercises, targetVelocity, stopV
           rest: exerciseIndex % setExercises.length === 0 ? 10000 : 10000,
         }
       });
+    }
+  }
+
+  if (superset) {
+    for (let setIndex = 0; setIndex < numSets; setIndex++) {
+      for (let exerciseIndex = 0; exerciseIndex < setExercises.length; exerciseIndex++) {
+        addSet(exerciseIndex, setIndex);
+      }
+    }
+  } else {
+    for (let exerciseIndex = 0; exerciseIndex < setExercises.length; exerciseIndex++) {
+      for (let setIndex = 0; setIndex < numSets; setIndex++) {
+        addSet(exerciseIndex, setIndex);
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import {
   createResource,
 } from "solid-js";
 import { Sample } from "../device/cables";
+import { setUserHue } from "../user/colors";
 import { promisifyTimeout } from "../util/promisify";
 import { createAbortEffect, reactivePromise } from "../util/signals";
 import {
@@ -110,6 +111,7 @@ export function createWorkoutService(
         setState("calibrating");
 
         await activateSet(currentSetConfig());
+        await setUserHue(currentSet().user.hue);
 
         setLoading(false);
 
