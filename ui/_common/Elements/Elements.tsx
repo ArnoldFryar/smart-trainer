@@ -43,7 +43,7 @@ export function Input(props) {
 
 export function Radio(props) {
   return (
-    <label>
+    <label class="group">
       <input
         {...props}
         type="radio"
@@ -58,10 +58,26 @@ export function Radio(props) {
         focus:border-white
         peer-checked:bg-primary-900
         peer-checked:border-primary-400
+        peer-checked:z-10
+        peer-checked:relative
+        group-first:rounded-l
+        group-last:rounded-r
+        text-center
         ${props.class}
-      `}>
+      `} style="margin-right:-1px;">
         {props.children}
       </div>
     </label>
+  );
+}
+
+export function RadioGroup(props) {
+  return (
+    <fieldset class="my-4">
+      <legend class="text-white font-light text-sm mb-1">{props.label}</legend>
+      <div class="flex">
+        {props.children}
+      </div>
+    </fieldset>
   );
 }
