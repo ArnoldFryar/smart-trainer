@@ -207,7 +207,7 @@ export type Set = {
   modeConfig: object,
   limit: keyof typeof WORKOUT_LIMIT;
   limitConfig: object;
-  user: { hue: number }
+  user: { id:number, hue: number }
 } & ({
   mode: typeof WORKOUT_MODE["STATIC"],
   modeConfig: { weight: number },
@@ -317,20 +317,20 @@ export async function selectExercises() {
 export function createWorkoutIterator({ length, exercises, superset, users, targetVelocity, stopVelocity }: WorkoutConfig, db?: typeof DB) {
   const numSets = length === "full" ? 5 : length === "short" ? 3 : 2;
   const setExercises = exercises.main.slice(0, length === "mini" ? 2 : 3)
-  const exerciseWeights = new Map();
-  const userData = [{ hue: 345 }, { hue: 190 }, { hue: 50 }];
+  const exerciseWeights = [new Map(), new Map(), new Map()];
+  const userData = [{ id:0, hue: 345 }, { id: 1, hue: 190 }, { id:2, hue: 50 }];
 
   const sets = [];
   const save = (set, samples: RepSamples, interrupted: boolean) => {
     localStorage.setItem("workoutSets", JSON.stringify(JSON.parse(localStorage.getItem("workoutSets") ?? "[]").concat({ set, samples, interrupted }).slice(-1000)));
-    if (!interrupted && !exerciseWeights.has(set.exercise)) {
+    if (!interrupted && !exerciseWeights[set.user.id].has(set.exercise)) {
       const previousRepForces = samples.filter(s => s.concentric).map(s => s.concentric).reverse()[1].map(c => Math.max(c.left.force, c.right.force));
       const min = Math.min(...previousRepForces);
       const max = Math.max(...previousRepForces);
       const mean = previousRepForces.reduce((a, b) => a + b, 0) / previousRepForces.length;
       const median = previousRepForces.sort((a, b) => a - b)[Math.floor(previousRepForces.length / 2)];
       console.log({ min, max, mean, median, previousRepForces});
-      exerciseWeights.set(set.exercise, mean);
+      exerciseWeights[set.user.id].set(set.exercise, mean);
     }
   }
 
@@ -338,7 +338,7 @@ export function createWorkoutIterator({ length, exercises, superset, users, targ
     const exercise = setExercises[exerciseIndex];
     for (let userIndex = 0; userIndex < users; userIndex++) {
       sets.push(() => {
-        const weight = exerciseWeights.get(exercise);
+        const weight = exerciseWeights[userIndex].get(exercise);
         return {
           exercise,
           user: userData[userIndex],
