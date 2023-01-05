@@ -31,7 +31,7 @@ const PULL_EXERCISES = [EXERCISES.BARBELL_ROW/*, EXERCISES.HIGH_PULL*/];
 const LEG_EXERCISES = [EXERCISES.BACK_SQUAT, EXERCISES.DEADLIFT];
 const ACCESSORY_EXERCISES = [EXERCISES.BICEP_CURL, EXERCISES.TRICEP_EXTENSION, EXERCISES.LATERAL_RAISE, EXERCISES.REAR_FLY, EXERCISES.CHEST_FLY];
 
-const WORKOUT_MODE = {
+export const WORKOUT_MODE = {
   STATIC: "STATIC",
   ISOKINETIC: "ISOKINETIC",
   ECCENTRIC: "ECCENTRIC",
@@ -39,7 +39,7 @@ const WORKOUT_MODE = {
   ASSESSMENT: "ASSESSMENT",
 }
 
-const WORKOUT_LIMIT = {
+export const WORKOUT_LIMIT = {
   REPS: "REPS",
   TIME: "TIME",
   VELOCITY_LOSS: "VELOCITY_LOSS",
@@ -228,7 +228,10 @@ export type Set = {
   limitConfig: { time: number },  
 } | {
   limit: typeof WORKOUT_LIMIT["VELOCITY_LOSS"],
-  limitConfig: { velocity: number },
+  limitConfig: { velocityThreshold: number },
+} | {
+  limit: typeof WORKOUT_LIMIT["ASSESSMENT"],
+  limitConfig: { stopVelocity: number },
 })
 
 export type SetConfig = {

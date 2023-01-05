@@ -6,7 +6,11 @@ import {
 import { ExerciseDemonstration } from "../ExerciseDemonstration/ExerciseDemonstration.js";
 import { Button } from "../../_common/Elements/Elements.js";
 import { createWorkoutService } from "../../../services/workout/hook.js";
-import { createWorkoutIterator } from "../../../services/workout/index.js";
+import {
+  createWorkoutIterator,
+  Set,
+  WORKOUT_LIMIT,
+} from "../../../services/workout/index.js";
 import { calculateMeanVelocity } from "../../../services/workout/util.js";
 
 export namespace WorkoutActive {
@@ -14,6 +18,8 @@ export namespace WorkoutActive {
     config: {
       exercises: { main: string[]; accessory: string[] };
       length: "full" | "short" | "mini";
+      users: number;
+      superset: boolean;
     };
     onComplete: () => void;
   }
@@ -21,7 +27,7 @@ export namespace WorkoutActive {
 
 export function WorkoutActive(props: WorkoutActive.Props) {
   const targetVelocity = 600;
-  const stopVelocity = targetVelocity*0.75;
+  const stopVelocity = targetVelocity * 0.75;
   const [sets, save] = createWorkoutIterator({
     ...props.config,
     targetVelocity,
@@ -48,19 +54,22 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     workoutState.state === "calibrating"
       ? -workoutState.calibrationRepsRemaining
       : workoutState.repCount;
-  const meanVelocityPerRep = () => workoutState.repSamples.map(({ concentric }) => calculateMeanVelocity(concentric));
+  const meanVelocityPerRep = () =>
+    workoutState.repSamples.map(({ concentric }) =>
+      calculateMeanVelocity(concentric)
+    );
 
   return (
     <WorkoutActiveView
       state={workoutState.state}
+      set={workoutState.currentSet}
       onComplete={props.onComplete}
-      exercise={exercise()}
       actions={{ ...actions, complete: props.onComplete }}
       video=""
       unit={"lbs" /* TODO: get from user preferences */}
       leftWeight={leftWeight()}
       rightWeight={rightWeight()}
-      targetWeight={100}
+      targetWeight={0}
       currentRep={currentRep()}
       calibrationRepsRemaining={workoutState.calibrationRepsRemaining}
       leftROM={leftROM()}
@@ -76,6 +85,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
 export namespace WorkoutActiveView {
   export interface Props {
     state: "calibrating" | "rest" | "workout" | "paused" | "complete";
+    set: Set;
     actions: {
       next: () => void;
       prev: () => void;
@@ -84,7 +94,6 @@ export namespace WorkoutActiveView {
       complete: () => void;
     };
     onComplete: () => void;
-    exercise: string;
     video: string;
     unit: "lbs" | "kg";
     leftWeight: number;
@@ -121,7 +130,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
       <Show when={active()}>
         <WorkoutActiveContainer
           unit={props.unit}
-          exercise={props.exercise}
+          exercise={props.set.exercise}
           video=""
           leftWeight={props.leftWeight}
           rightWeight={props.rightWeight}
@@ -135,13 +144,31 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
             <div>{props.calibrationRepsRemaining} reps remaining</div>
           </Show>
           <Show when={props.state === "workout"}>
-            <Reps
-              targetVelocity={props.targetVelocity}
-              stopVelocity={props.stopVelocity}
-              meanVelocityPerRep={props.meanVelocityPerRep}
-              currentRep={props.currentRep}
-              totalReps={props.totalReps}
-            />
+            <Show when={props.set.limit === "ASSESSMENT"}>
+              <Reps
+                targetVelocity={props.targetVelocity}
+                stopVelocity={props.targetVelocity}
+                meanVelocityPerRep={props.meanVelocityPerRep}
+                currentRep={props.currentRep}
+                totalReps={props.totalReps}
+              />
+            </Show>
+            <Show when={props.set.limit === "VELOCITY_LOSS"}>
+              {() => {
+                const stopVelocity = () =>
+                  Math.max(...props.meanVelocityPerRep) *
+                  (props.set.limitConfig as any).velocityThreshold;
+                return (
+                  <Reps
+                    targetVelocity={props.targetVelocity}
+                    stopVelocity={stopVelocity()}
+                    meanVelocityPerRep={props.meanVelocityPerRep}
+                    currentRep={props.currentRep}
+                    totalReps={props.totalReps}
+                  />
+                );
+              }}
+            </Show>
           </Show>
           <Show when={props.state === "paused"}>
             <div>Paused</div>
@@ -223,7 +250,7 @@ export function Reps(props: Reps.Props) {
   const k =
     Math.log(1 / CURVE_THRESHOLD - 1) /
     ((props.stopVelocity / softMax) * 2 - 1);
-  const sCurve = (x: number) => 1 / (1 + Math.exp(k * ((x / softMax) * 2 - 1)));
+  const sCurve = (x: number) => x; // 1 / (1 + Math.exp(k * ((x / softMax) * 2 - 1)));
   const maxValue = () =>
     sCurve(Math.max(props.targetVelocity, ...props.meanVelocityPerRep));
   const getValue = (x: number) => (sCurve(x) / maxValue()) * 100;

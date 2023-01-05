@@ -38,7 +38,7 @@ export namespace Weight {
 
 export function Weight(props: Weight.Props) {
   const weight = () => props.weight * (props.unit === 'lbs' ? 2.2 : 1);
-  const factor = () => 0.5 + Math.pow(props.weight / props.targetWeight, 2) / 2;
+  const factor = () => props.targetWeight ? 0.5 + Math.pow(props.weight / props.targetWeight, 2) / 2 : 1;
   return (
     <div
       class="text-right"

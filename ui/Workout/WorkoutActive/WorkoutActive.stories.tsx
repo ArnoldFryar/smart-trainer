@@ -4,7 +4,7 @@ import { WorkoutActiveView, Reps } from './WorkoutActive.js';
 export default {
   title: 'Workout/WorkoutActive',
   argTypes: {
-    exercise: { control: 'text' },
+    set: { control: 'object' },
     video: { control: 'text' },
     unit: {
       options: ['lbs', 'kg'],
@@ -34,8 +34,7 @@ const Template: Story<WorkoutActiveView.Props> = (
   args: WorkoutActiveView.Props
 ) => <WorkoutActiveView {...args} />;
 
-export const Test = Template.bind({});
-Test.args = {
+const Base = {
   unit: 'lbs',
   leftWeight: 10,
   rightWeight: 10,
@@ -43,11 +42,16 @@ Test.args = {
   leftROM: 0.3,
   rightROM: 0.3,
   targetVelocity: 600,
-  stopVelocity: 400,
-  meanVelocityPerRep: [8200, 640, 650, 550, 540, 390],
+  meanVelocityPerRep: [820, 640, 650, 550, 540, 390],
   currentRep: 5,
   totalReps: 8,
-  exercise: 'Bench Press',
+  set: {
+    exercise: 'Bench Press',
+    limit: "VELOCITY_LOSS",
+    limitConfig: {
+      velocityThreshold: 0.6
+    }
+  },
   video: 'https://cdn.jwplayer.com/manifests/3RYV3I0A.m3u8',
   calibrationRepsRemaining: 0,
   state: 'workout',
@@ -55,8 +59,32 @@ Test.args = {
 
 export const Warmup = Template.bind({});
 Warmup.args = {
-  ...Test.args,
+  ...Base,
   state: 'calibrating',
   calibrationRepsRemaining: 3,
   currentRep: -3,
+};
+
+export const VelocityLoss = Template.bind({});
+VelocityLoss.args = {
+  ...Base,
+  set: {
+    ...Base.set,
+    limit: "VELOCITY_LOSS",
+    limitConfig: {
+      velocityThreshold: 0.6
+    }
+  },
+};
+
+export const Assessment = Template.bind({});
+Assessment.args = {
+  ...Base,
+  set: {
+    ...Base.set,
+    limit: "ASSESSMENT",
+    limitConfig: {
+      stopVelocity: 600,
+    }
+  },
 };
