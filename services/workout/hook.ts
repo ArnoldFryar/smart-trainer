@@ -8,24 +8,31 @@ import {
 import { Sample } from "../device/cables";
 import { promisifyTimeout } from "../util/promisify";
 import { createAbortEffect, reactivePromise } from "../util/signals";
-import { MODE_HANDLERS, LIMIT_HANDLERS, SetConfig, activateSet, Set } from "./index";
+import {
+  MODE_HANDLERS,
+  LIMIT_HANDLERS,
+  SetConfig,
+  activateSet,
+  Set,
+} from "./index";
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
-export type RepSamples = Array<{ concentric?: Sample[], eccentric?: Sample[] }>;
-export function createWorkoutService(sets: Array<() => Promise<Set>>, save: (set: Set, samples: RepSamples, interrupted?: boolean) => void) {
+export type RepSamples = Array<{ concentric?: Sample[]; eccentric?: Sample[] }>;
+export function createWorkoutService(
+  sets: Array<() => Promise<Set>>,
+  save: (set: Set, samples: RepSamples, interrupted?: boolean) => void
+) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
   const [currentSetIndex, setCurrentSetIndex] = createSignal(0);
-  const [currentSet] = createResource<Set, number>(currentSetIndex, (i) => sets[i]())
+  const [currentSet] = createResource<Set, number>(currentSetIndex, (i) =>
+    sets[i]()
+  );
   const [repSamples, setRepSamples] = createSignal<RepSamples>([]);
   const currentSetConfig = () => {
     return {
-      ...MODE_HANDLERS[currentSet().mode](
-        currentSet().modeConfig as any
-      ),
-      ...LIMIT_HANDLERS[currentSet().limit](
-        currentSet().limitConfig as any
-      ),
+      ...MODE_HANDLERS[currentSet().mode](currentSet().modeConfig as any),
+      ...LIMIT_HANDLERS[currentSet().limit](currentSet().limitConfig as any),
     } as SetConfig;
   };
   const calibrationRepsRemaining = () => {
@@ -43,7 +50,7 @@ export function createWorkoutService(sets: Array<() => Promise<Set>>, save: (set
   };
   const prev = async () => {
     saveAndResetSamples();
-    setLoading(true);    
+    setLoading(true);
     setCurrentSetIndex(currentSetIndex() - 1);
   };
   const pause = () => {
@@ -65,18 +72,23 @@ export function createWorkoutService(sets: Array<() => Promise<Set>>, save: (set
   createRenderEffect(() => {
     const rep = Math.floor(repCount());
     const existingSamples = untrack(repSamples);
-    if (rep >= 0 && rep <= existingSamples.length) {
+    if (rep >= 0 && rep <= existingSamples.length && state() === "workout") {
       let phase = Trainer.phase();
       const newSample = Trainer.sample();
       const newSamples = [...existingSamples];
       let currentRep = (newSamples[rep] = newSamples[rep] ?? {});
-      // if the trainer says we're in the concentric phase, 
-      // but we're still going down, treat it as eccentric
-      if (phase === "concentric" && !currentRep.concentric && (newSample.left.velocity + newSample.right.velocity) < 0) {
-        phase = "eccentric";
-        if (!currentRep.eccentric) {
-          // if the current rep doesn't have an eccentric phase,
-          // we need to put this sample in the previous rep
+      // if the trainer says we're in a new phase,
+      // but the sample velocity disagrees,
+      // put the sample data in the correct phase
+      const combinedVelocity =
+        newSample.left.velocity + newSample.right.velocity;
+      if (
+        !currentRep[phase] &&
+        ((phase === "concentric" && combinedVelocity < 0) ||
+          (phase === "eccentric" && combinedVelocity > 0))
+      ) {
+        phase = phase === "concentric" ? "eccentric" : "concentric";
+        if (!currentRep[phase]) {
           currentRep = newSamples[rep - 1] ?? {};
         }
       }
@@ -151,7 +163,7 @@ export function createWorkoutService(sets: Array<() => Promise<Set>>, save: (set
       },
       get calibrationRepsRemaining() {
         return calibrationRepsRemaining();
-      }
+      },
     },
     { next, prev, pause, resume },
   ] as const;
