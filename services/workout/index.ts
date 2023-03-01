@@ -5,31 +5,13 @@ import { reactivePromise } from '../util/signals.js';
 import { Accessor, createEffect } from "solid-js";
 import { RepSamples } from "./hook";
 import { calculateMeanVelocity } from "./util";
+import { Exercise, PUSH_EXERCISES, PULL_EXERCISES, LEG_EXERCISES, ACCESSORY_EXERCISES } from "./exercises";
+import { beep, beepBeepBeep } from "../util/sounds";
 
 const MAX_REPS = 126;
 const MAX_WEIGHT = 100;
 
-const EXERCISES = {
-  BACK_SQUAT: "BACK_SQUAT",
-  FLAT_BENCH_PRESS: "FLAT_BENCH_PRESS",
-  BARBELL_ROW: "BARBELL_ROW",
-  DEADLIFT: "DEADLIFT",
-  OVERHEAD_PRESS: "OVERHEAD_PRESS",
-  HIGH_PULL: "HIGH_PULL",
-  THRUSTER: "THRUSTER",
-  LUNGES: "LUNGES",
-  BICEP_CURL: "BICEP_CURL",
-  TRICEP_EXTENSION: "TRICEP_EXTENSION",
-  LATERAL_RAISE: "LATERAL_RAISE",
-  REAR_FLY: "REAR_FLY",
-  CHEST_FLY: "CHEST_FLY",
-  CALF_RAISE: "CALF_RAISE",
-}
-
-const PUSH_EXERCISES = [EXERCISES.FLAT_BENCH_PRESS, EXERCISES.OVERHEAD_PRESS];
-const PULL_EXERCISES = [EXERCISES.BARBELL_ROW/*, EXERCISES.HIGH_PULL*/];
-const LEG_EXERCISES = [EXERCISES.BACK_SQUAT, EXERCISES.DEADLIFT];
-const ACCESSORY_EXERCISES = [EXERCISES.BICEP_CURL, EXERCISES.TRICEP_EXTENSION, EXERCISES.LATERAL_RAISE, EXERCISES.REAR_FLY, EXERCISES.CHEST_FLY];
+export type { Exercise };
 
 export const WORKOUT_MODE = {
   STATIC: "STATIC",
@@ -37,6 +19,7 @@ export const WORKOUT_MODE = {
   ECCENTRIC: "ECCENTRIC",
   CONCENTRIC: "CONCENTRIC",
   ASSESSMENT: "ASSESSMENT",
+  ADAPTIVE: "ADAPTIVE",
 }
 
 export const WORKOUT_LIMIT = {
@@ -45,6 +28,7 @@ export const WORKOUT_LIMIT = {
   VELOCITY_LOSS: "VELOCITY_LOSS",
   ASSESSMENT: "ASSESSMENT",
   FAILURE: "FAILURE",
+  SPOTTER: "SPOTTER",
 }
 
 export const MODE_HANDLERS = {
@@ -133,7 +117,26 @@ export const MODE_HANDLERS = {
       },
       calibrationReps: 3.5
     };
-  }
+  },
+  [WORKOUT_MODE.ADAPTIVE]: ({ targetVelocity, ratio }) => {
+    const RATE = 12 * ratio;
+    return {
+      maxWeight: MAX_WEIGHT,
+      maxWeightIncrease: 0,
+      weightModulation: {
+        concentric: {
+          decrease: { minMmS: targetVelocity - 400, maxMmS: targetVelocity - 1, ramp: RATE * 0.5 },
+          increase: { minMmS: targetVelocity + 1, maxMmS: targetVelocity + 400, ramp: RATE },
+        },
+        eccentric: {
+          decrease: { minMmS: -1300, maxMmS: -1200, ramp: 0 },
+          increase: { minMmS: -100, maxMmS: -50, ramp: 0 },
+        },
+      },
+      calibrationReps: 3.5,
+      baselineReps: 2
+    };
+  },
 }
 
 export const LIMIT_HANDLERS = {
@@ -197,11 +200,41 @@ export const LIMIT_HANDLERS = {
         }, aborted)
       }
     } as SetConfig;
+  },
+  [WORKOUT_LIMIT.SPOTTER]: ({ hardReps = 3 }) => {
+    return {
+      reps: MAX_REPS,
+      limit: (repCount, repSamples, aborted) => {
+        return reactivePromise((resolve) => {
+          const prevRep = (i: number) => repSamples()[Math.floor(repCount() - i)];
+          const prevForce = (i: number) => Math.max(...prevRep(i).concentric.map(c => Math.max(c.left.force, c.right.force)));
+          let firstHardRep = Number.MAX_SAFE_INTEGER;
+          createEffect(() => {
+            if (repCount() >= 3) {
+              if (firstHardRep === Number.MAX_SAFE_INTEGER) {
+                const weightReduction = prevForce(2) - prevForce(1);
+                if (weightReduction > 0) {
+                  firstHardRep = repCount();
+                  beep();
+                }
+              } else {
+                if (repCount() - firstHardRep >= hardReps) {
+                  resolve();
+                  beepBeepBeep();
+                } else {
+                  beep();
+                }
+              }
+            }
+          })
+        }, aborted)
+      }
+    } as SetConfig;
   }
 }
 
 export type Set = {
-  exercise: string;
+  exercise: Exercise;
   rest: number;
   mode: keyof typeof WORKOUT_MODE;
   modeConfig: object,
@@ -240,16 +273,18 @@ export type SetConfig = {
   weightModulation: Parameters<typeof getForces>[2];
   reps: number;
   calibrationReps: number;
+  baselineReps?: number;
   limit: (repCount: () => number, repSamples: () => RepSamples, abort: Accessor<boolean>) => Promise<any>;
 }
 
 export async function activateSet(config: SetConfig) {
   const hasHalfCalibrationRep = Boolean(config.calibrationReps % 1);
   const actualCalibrationReps = Math.floor(config.calibrationReps);
+  const baselineReps = config.baselineReps || actualCalibrationReps;
   const totalReps = config.reps + (hasHalfCalibrationRep ? 1 : 0);
 
   await Trainer.activate(
-    getReps(totalReps, actualCalibrationReps, actualCalibrationReps), 
+    getReps(totalReps, baselineReps, actualCalibrationReps), 
     getForces(config.maxWeight, config.maxWeightIncrease, config.weightModulation)
   );
 }
@@ -283,7 +318,7 @@ export type WorkoutConfig = {
   length: "full" | "short" | "mini";
   superset: boolean;
   users: number;
-  exercises: { main: string[], accessory: string[] };
+  exercises: { main: Exercise[], accessory: Exercise[] };
   targetVelocity: number;
   stopVelocity: number;
 }
@@ -307,7 +342,11 @@ export async function selectExercises() {
   // accessories should complement main exercises
   const accessory = [...ACCESSORY_EXERCISES].sort(() => Math.random() - 0.5).slice(0, 3);
 
-  return { main, accessory };
+  return { 
+    // TODO: remove when wrist is no longer injured
+    main: [legs], 
+    accessory
+  };
 }
 
 // LENGTH
@@ -315,37 +354,70 @@ export async function selectExercises() {
 // short: 3 main, 2 accessory, 3 sets (15 sets, 5 breaks, 20 min)
 // full: 3 main, 3 accessory, 5 sets (30 sets, 9 breaks, 40 min)
 export function createWorkoutIterator({ length, exercises, superset, users, targetVelocity, stopVelocity }: WorkoutConfig, db?: typeof DB) {
-  const numSets = length === "full" ? 5 : length === "short" ? 3 : 2;
-  const setExercises = exercises.main.slice(0, length === "mini" ? 2 : 3)
-  const exerciseWeights = [new Map(), new Map(), new Map()];
+  const numSets = length === "full" ? 5 : length === "short" ? 3 : 1;
+  const hardReps = length === "full" ? 3 : length === "short" ? 4 : 5;
+  const setExercises = exercises.main.concat(exercises.accessory.slice(0, 2));
   const userData = [{ id:0, hue: 345 }, { id: 1, hue: 190 }, { id:2, hue: 50 }];
 
   const sets = [];
   const save = (set, samples: RepSamples, interrupted: boolean) => {
-    localStorage.setItem("workoutSets", JSON.stringify(JSON.parse(localStorage.getItem("workoutSets") ?? "[]").concat({ set, samples, interrupted }).slice(-1000)));
-    if (!interrupted && !exerciseWeights[set.user.id].has(set.exercise)) {
-      const previousRepForces = samples.filter(s => s.concentric).map(s => s.concentric).reverse()[1].map(c => Math.max(c.left.force, c.right.force));
-      const min = Math.min(...previousRepForces);
-      const max = Math.max(...previousRepForces);
-      const mean = previousRepForces.reduce((a, b) => a + b, 0) / previousRepForces.length;
-      const median = previousRepForces.sort((a, b) => a - b)[Math.floor(previousRepForces.length / 2)];
-      console.log({ min, max, mean, median, previousRepForces});
-      exerciseWeights[set.user.id].set(set.exercise, mean);
+    let data: any = { set, samples, interrupted };
+    if (!interrupted) {
+      const reps = samples.filter(s => s.concentric).map(sample => {
+        const forces = sample.concentric.map(c => c.left.force + c.right.force);
+        const velocities = sample.concentric.map(c => Math.abs(c.left.velocity) > Math.abs(c.right.velocity) ? c.left.velocity : c.right.velocity);
+        const powers = sample.concentric.map((c, i) => forces[i] * velocities[i]);
+        return {
+          sample,
+          force: {
+            min: Math.min(...forces),
+            max: Math.max(...forces),
+            mean: forces.reduce((a, b) => a + b, 0) / forces.length,
+            median: forces.sort((a, b) => a - b)[Math.floor(forces.length / 2)],
+          },
+          velocity: {
+            min: Math.min(...velocities),
+            max: Math.max(...velocities),
+            mean: velocities.reduce((a, b) => a + b, 0) / velocities.length,
+            median: velocities.sort((a, b) => a - b)[Math.floor(velocities.length / 2)],
+          },
+          power: {
+            min: Math.min(...powers),
+            max: Math.max(...powers),
+            mean: powers.reduce((a, b) => a + b, 0) / powers.length,
+            median: powers.sort((a, b) => a - b)[Math.floor(powers.length / 2)],
+          }
+        }
+      });
+
+      const maxPower = Math.max(...reps.map(r => r.power.max));
+      const maxForce = Math.max(...reps.map(r => r.force.max));
+      const maxMeanPower = Math.max(...reps.map(r => r.power.mean));
+      const maxMinForce = Math.max(...reps.map(r => r.force.min));
+
+      const weightedReps = reps.slice(0, reps.findIndex(r => r.force.min === maxMinForce) + 1).reduce((count, r) => count + Math.pow(r.force.min / maxMinForce, 2), 0);
+      const estimated1rm = maxMinForce * (36 / (37 - weightedReps));
+
+      data.metrics = { reps, maxPower, maxForce, maxMeanPower, maxMinForce, weightedReps, estimated1rm };
+
+      console.log(data.metrics);
     }
+    localStorage.setItem("workoutSets", JSON.stringify(JSON.parse(localStorage.getItem("workoutSets") ?? "[]").concat(data).slice(-1000)));
   }
 
   const addSet = (exerciseIndex: number, setIndex: number) => {
     const exercise = setExercises[exerciseIndex];
+    const ratio = exercise.ratio * (1 + setIndex * 0.1);
+    const targetVelocity = 1000 * (exercise.mvt ?? 0.25);
     for (let userIndex = 0; userIndex < users; userIndex++) {
       sets.push(() => {
-        const weight = exerciseWeights[userIndex].get(exercise);
         return {
           exercise,
           user: userData[userIndex],
-          mode: weight ? WORKOUT_MODE.STATIC : WORKOUT_MODE.ASSESSMENT,
-          modeConfig: { weight, targetVelocity },
-          limit: weight ? WORKOUT_LIMIT.VELOCITY_LOSS : WORKOUT_LIMIT.ASSESSMENT,
-          limitConfig: { stopVelocity: targetVelocity },
+          mode: WORKOUT_MODE.ADAPTIVE,
+          modeConfig: { ratio, targetVelocity },
+          limit: WORKOUT_LIMIT.SPOTTER,
+          limitConfig: { hardReps },
           rest: exerciseIndex % setExercises.length === 0 ? 10000 : 10000,
         }
       });

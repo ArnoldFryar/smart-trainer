@@ -1,7 +1,8 @@
+import { Exercise } from '../../../services/workout/exercises.js';
 import { Button, Radio, RadioGroup } from '../../_common/Elements/Elements.js';
 export namespace WorkoutForm {
   export interface Props {
-    exercies: { main: string[], accessory: string[] },
+    exercies: { main: Exercise[], accessory: Exercise[] },
     connected: boolean,
     onSubmit: (workoutOptions: any) => void;
   }

@@ -129,7 +129,7 @@ class VFormTrainer {
   async _writeCommand(command) {
     await enqueue(
       await this._service.getCharacteristic(CHARACTERISTICS.COMMAND),
-      'writeValueWithoutResponse',
+      'writeValueWithResponse',
       command
     );
   }

@@ -8,15 +8,15 @@ import { Button } from "../../_common/Elements/Elements.js";
 import { createWorkoutService } from "../../../services/workout/hook.js";
 import {
   createWorkoutIterator,
+  Exercise,
   Set,
-  WORKOUT_LIMIT,
 } from "../../../services/workout/index.js";
 import { calculateMeanVelocity } from "../../../services/workout/util.js";
 
 export namespace WorkoutActive {
   export interface Props {
     config: {
-      exercises: { main: string[]; accessory: string[] };
+      exercises: { main: Exercise[]; accessory: Exercise[] };
       length: "full" | "short" | "mini";
       users: number;
       superset: boolean;
@@ -34,8 +34,6 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     stopVelocity,
   });
   const [workoutState, actions] = createWorkoutService(sets, save);
-
-  const exercise = () => workoutState.currentSet.exercise;
 
   const leftWeight = () => {
     const { left } = Trainer.sample();
@@ -130,7 +128,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
       <Show when={active()}>
         <WorkoutActiveContainer
           unit={props.unit}
-          exercise={props.set.exercise}
+          exercise={props.set.exercise.id}
           video=""
           leftWeight={props.leftWeight}
           rightWeight={props.rightWeight}
@@ -144,7 +142,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
             <div>{props.calibrationRepsRemaining} reps remaining</div>
           </Show>
           <Show when={props.state === "workout"}>
-            <Show when={props.set.limit === "ASSESSMENT"}>
+            <Show when={props.set.limit === "ASSESSMENT" || props.set.limit === "SPOTTER"}>
               <Reps
                 targetVelocity={props.targetVelocity}
                 stopVelocity={props.targetVelocity}
