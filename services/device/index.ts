@@ -58,43 +58,46 @@ class VFormTrainer {
         right: (right.position - rangeBottom) / range
       };
     };
+    this.autoconnect();
+  }
+  async autoconnect() {
+    try {
+      let abortController: AbortController;
+      const devices = await navigator.bluetooth.getDevices();
+      const device = devices.find((d) => d.name.startsWith('Vee'));
+      const watchAndConnect = async () => {
+        if (document.hidden) {
+          abortController?.abort();
+        } else {
+          abortController = new AbortController();
+          device.watchAdvertisements({
+            signal: abortController.signal,
+          });
+
+          await promisifyEvent(device, 'advertisementreceived');
+          document.removeEventListener('visibilitychange', watchAndConnect);
+
+          this._doConnect(device);
+        }
+      };
+
+      document.addEventListener("visibilitychange", watchAndConnect);
+      watchAndConnect();
+    } catch (e) {
+      console.log(e);
+    }
   }
   async connect() {
     this._setConnected(undefined);
+    this._doConnect(await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: 'Vee' }],
+      optionalServices: [PRIMARY_SERVICE_ID],
+    }));
+  }
+  async _doConnect(device: BluetoothDevice) {
     try {
-      const abortController = new AbortController();
-      try {
-        this._server = await Promise.race([
-          promisifyTimeout(4000),
-          (async () => {
-            const devices = await navigator.bluetooth.getDevices();
-            const device = devices.find((d) => d.name.startsWith('Vee'));
-            if (device) {
-              device.watchAdvertisements({
-                signal: abortController.signal,
-              });
-
-              await promisifyEvent(device, 'advertisementreceived');
-
-              return await (this._device = device).gatt.connect();
-            }
-            return undefined;
-          })(),
-        ]);
-      } catch (e) {
-        console.log('unable to connect to existing device', e);
-      } finally {
-        abortController.abort();
-      }
-
-      if (!this._server) {
-        this._device = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: 'Vee' }],
-          optionalServices: [PRIMARY_SERVICE_ID],
-        });
-        this._server = await this._device.gatt.connect();
-      }
-
+      this._device = device;
+      this._server = await device.gatt.connect();
       this._device.addEventListener('gattserverdisconnected', () => {
         console.log('disconnect');
         this._device = null;
@@ -107,8 +110,8 @@ class VFormTrainer {
       await this.stop();
       await this.setColor(0x000000);
     } catch (e) {
-      console.log(e);
       this._setConnected(false);
+      throw e;
     }
   }
   async disconnect() {
