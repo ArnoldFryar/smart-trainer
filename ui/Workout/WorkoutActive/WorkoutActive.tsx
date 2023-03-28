@@ -12,6 +12,7 @@ import {
   Set,
 } from "../../../services/workout/index.js";
 import { calculateMeanVelocity } from "../../../services/workout/util.js";
+import { wakeLock } from "../../../services/util/wake-lock.js";
 
 export namespace WorkoutActive {
   export interface Props {
@@ -50,6 +51,8 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     workoutState.repSamples.map(({ concentric }) =>
       calculateMeanVelocity(concentric)
     );
+
+  wakeLock();
 
   return (
     <WorkoutActiveView
