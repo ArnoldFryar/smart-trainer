@@ -234,6 +234,42 @@ export const LIMIT_HANDLERS = {
         }, aborted)
       }
     } as SetConfig;
+  },
+  [WORKOUT_LIMIT.FAILURE]: ({ expectedPause = 1, warningCount = 3 }) => {
+    return {
+      reps: MAX_REPS,
+      limit: (repCount, repSamples, aborted) => {
+        return reactivePromise((resolve) => {
+          let struggleStart = null;
+          let currentWarningCount = 0;
+          createEffect(() => {
+            if (Trainer.phase() === "concentric") {
+              const rom = Math.max(Trainer.rangeOfMotion().left, Trainer.rangeOfMotion().right);
+              if (rom < 0.1) {
+                if (struggleStart === null) {
+                  struggleStart = Trainer.sample().time;
+                  currentWarningCount = 0;
+                } else {
+                  const struggleCount = Math.floor((Trainer.sample().time - struggleStart) / 1000) - expectedPause;
+                  if (struggleCount > currentWarningCount) {
+                    if (++currentWarningCount === warningCount) {
+                      beepBeepBeep();
+                      resolve();
+                    } else {
+                      beep();
+                    }
+                  }
+                }
+              } else {
+                struggleStart = null;
+              }
+            } else {
+              struggleStart = null;
+            }
+          })
+        }, aborted)
+      }
+    } as SetConfig;
   }
 }
 
