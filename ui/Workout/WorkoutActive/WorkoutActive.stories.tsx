@@ -70,9 +70,10 @@ VelocityLoss.args = {
   ...Base,
   set: {
     ...Base.set,
-    limit: "VELOCITY_LOSS",
-    limitConfig: {
-      velocityThreshold: 0.6
+    mode: "ADAPTIVE",
+    modeConfig: {
+      maxVelocity: 400,
+      minVelocity: 200
     }
   },
 };

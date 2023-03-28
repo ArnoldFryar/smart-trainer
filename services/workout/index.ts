@@ -2,10 +2,10 @@ import { getForces, getReps } from "../device/activate";
 import type DB from "../db/settings.js";
 import { promisifyTimeout } from "../util/promisify.js";
 import { reactivePromise } from '../util/signals.js';
-import { Accessor, createEffect } from "solid-js";
+import { Accessor, createEffect, untrack } from "solid-js";
 import { RepSamples } from "./hook";
 import { calculateMeanVelocity } from "./util";
-import { Exercise, PUSH_EXERCISES, PULL_EXERCISES, LEG_EXERCISES, ACCESSORY_EXERCISES } from "./exercises";
+import { Exercise, PUSH_EXERCISES, PULL_EXERCISES, LEG_EXERCISES, ACCESSORY_EXERCISES, EXERCISES } from "./exercises";
 import { beep, beepBeepBeep } from "../util/sounds";
 
 const MAX_REPS = 126;
@@ -118,15 +118,15 @@ export const MODE_HANDLERS = {
       calibrationReps: 3.5
     };
   },
-  [WORKOUT_MODE.ADAPTIVE]: ({ targetVelocity, ratio }) => {
-    const RATE = 12 * ratio;
+  [WORKOUT_MODE.ADAPTIVE]: ({ maxVelocity, minVelocity, ratio }) => {
+    const RATE = 10 * ratio;
     return {
       maxWeight: MAX_WEIGHT,
       maxWeightIncrease: 0,
       weightModulation: {
         concentric: {
-          decrease: { minMmS: targetVelocity - 400, maxMmS: targetVelocity - 1, ramp: RATE * 0.5 },
-          increase: { minMmS: targetVelocity + 1, maxMmS: targetVelocity + 400, ramp: RATE },
+          decrease: { minMmS: minVelocity - 400, maxMmS: minVelocity - 1, ramp: RATE * 0.8 },
+          increase: { minMmS: maxVelocity + 1, maxMmS: maxVelocity + 400, ramp: RATE },
         },
         eccentric: {
           decrease: { minMmS: -1300, maxMmS: -1200, ramp: 0 },
@@ -207,24 +207,28 @@ export const LIMIT_HANDLERS = {
       limit: (repCount, repSamples, aborted) => {
         return reactivePromise((resolve) => {
           const prevRep = (i: number) => repSamples()[Math.floor(repCount() - i)];
-          const prevForce = (i: number) => Math.max(...prevRep(i).concentric.map(c => Math.max(c.left.force, c.right.force)));
-          let firstHardRep = Number.MAX_SAFE_INTEGER;
+          const minForce = (rep: RepSamples[number]) => Math.min(...rep.concentric.map(c => Math.max(c.left.force, c.right.force)));
+          const maxMinForce = () => Math.max(...repSamples().filter(rep => rep.concentric).map(rep => minForce(rep)));
+          let currentHardReps = 0;
           createEffect(() => {
-            if (repCount() >= 3) {
-              if (firstHardRep === Number.MAX_SAFE_INTEGER) {
-                const weightReduction = prevForce(2) - prevForce(1);
-                if (weightReduction > 0) {
-                  firstHardRep = repCount();
-                  beep();
-                }
-              } else {
-                if (repCount() - firstHardRep >= hardReps) {
-                  resolve();
-                  beepBeepBeep();
+            if (repCount() >= 3 && repCount() % 1 === 0) {
+              untrack(() => {
+                const prevForce = minForce(prevRep(1));
+                const target = maxMinForce();
+                if (prevForce < target) {
+                  if (++currentHardReps === hardReps) {
+                    console.log("done");
+                    beepBeepBeep();
+                    resolve();
+                  } else {
+                    console.log(`${hardReps - currentHardReps} more?`);
+                    beep();
+                  }
                 } else {
-                  beep();
+                  console.log("keep going", repCount())
+                  currentHardReps = 0;
                 }
-              }
+              });
             }
           })
         }, aborted)
@@ -237,35 +241,23 @@ export type Set = {
   exercise: Exercise;
   rest: number;
   mode: keyof typeof WORKOUT_MODE;
-  modeConfig: object,
+  modeConfig: {
+    weight?: number,
+    targetVelocity?: number,
+    e1rm?: number,
+    maxVelocity?: number, 
+    minVelocity?: number, 
+    ratio?: number 
+  },
   limit: keyof typeof WORKOUT_LIMIT;
-  limitConfig: object;
+  limitConfig: {
+    reps?: number,
+    time?: number,
+    velocityThreshold?: number,
+    stopVelocity?: number
+  };
   user: { id:number, hue: number }
-} & ({
-  mode: typeof WORKOUT_MODE["STATIC"],
-  modeConfig: { weight: number },
-} | {
-  mode: typeof WORKOUT_MODE["ISOKINETIC"],
-  modeConfig: { targetVelocity: number, e1rm: number },
-} | {
-  mode: typeof WORKOUT_MODE["ECCENTRIC"],
-  modeConfig: { weight: number },
-} | {
-  mode: typeof WORKOUT_MODE["CONCENTRIC"],
-  modeConfig: { weight: number },
-}) & ({
-  limit: typeof WORKOUT_LIMIT["REPS"],
-  limitConfig: { reps: number },
-} | {
-  limit: typeof WORKOUT_LIMIT["TIME"],
-  limitConfig: { time: number },  
-} | {
-  limit: typeof WORKOUT_LIMIT["VELOCITY_LOSS"],
-  limitConfig: { velocityThreshold: number },
-} | {
-  limit: typeof WORKOUT_LIMIT["ASSESSMENT"],
-  limitConfig: { stopVelocity: number },
-})
+};
 
 export type SetConfig = {
   maxWeight: number;
@@ -319,8 +311,6 @@ export type WorkoutConfig = {
   superset: boolean;
   users: number;
   exercises: { main: Exercise[], accessory: Exercise[] };
-  targetVelocity: number;
-  stopVelocity: number;
 }
 
 export async function selectExercises() {
@@ -344,8 +334,8 @@ export async function selectExercises() {
 
   return { 
     // TODO: remove when wrist is no longer injured
-    main: [legs], 
-    accessory
+    main: [EXERCISES.BACK_SQUAT], 
+    accessory: [EXERCISES.BICEP_CURL, EXERCISES.OVERHEAD_TRICEP_EXTENSION]
   };
 }
 
@@ -353,9 +343,9 @@ export async function selectExercises() {
 // micro: 2 main, 2 set (4 sets, 1 break, 5 min)
 // short: 3 main, 2 accessory, 3 sets (15 sets, 5 breaks, 20 min)
 // full: 3 main, 3 accessory, 5 sets (30 sets, 9 breaks, 40 min)
-export function createWorkoutIterator({ length, exercises, superset, users, targetVelocity, stopVelocity }: WorkoutConfig, db?: typeof DB) {
+export function createWorkoutIterator({ length, exercises, superset, users }: WorkoutConfig, db?: typeof DB) {
   const numSets = length === "full" ? 5 : length === "short" ? 3 : 1;
-  const hardReps = length === "full" ? 3 : length === "short" ? 4 : 5;
+  const hardReps = 3;
   const setExercises = exercises.main.concat(exercises.accessory.slice(0, 2));
   const userData = [{ id:0, hue: 345 }, { id: 1, hue: 190 }, { id:2, hue: 50 }];
 
@@ -408,14 +398,15 @@ export function createWorkoutIterator({ length, exercises, superset, users, targ
   const addSet = (exerciseIndex: number, setIndex: number) => {
     const exercise = setExercises[exerciseIndex];
     const ratio = exercise.ratio * (1 + setIndex * 0.1);
-    const targetVelocity = 1000 * (exercise.mvt ?? 0.25);
+    const minVelocity = 50 + 1.5 * (1000 * (exercise.mvt ?? 0.25));
+    const maxVelocity = Math.floor((600 + minVelocity) / 2);
     for (let userIndex = 0; userIndex < users; userIndex++) {
       sets.push(() => {
         return {
           exercise,
           user: userData[userIndex],
           mode: WORKOUT_MODE.ADAPTIVE,
-          modeConfig: { ratio, targetVelocity },
+          modeConfig: { ratio, maxVelocity, minVelocity },
           limit: WORKOUT_LIMIT.SPOTTER,
           limitConfig: { hardReps },
           rest: exerciseIndex % setExercises.length === 0 ? 10000 : 10000,

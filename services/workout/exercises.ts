@@ -132,13 +132,13 @@ export const EXERCISES: Record<string, Exercise> = {
       91 / BACK_SQUAT_SL, // 0.413
       0.4 * BENCH_SQUAT_RATIO, // 0.300
     ),
-    mvt: 0.25, // TODO: check
+    mvt: 0.15, // TODO: check
     equipment: EQUIPMENT.HANDLES,
   },
   OVERHEAD_TRICEP_EXTENSION: {
     id: "OVERHEAD_TRICEP_EXTENSION",
     ratio: 96.9 / BACK_SQUAT_SL, // 0.44
-    mvt: 0.25, // TODO: check
+    mvt: 0.15, // TODO: check
     equipment: EQUIPMENT.ROPE,
   },
   LATERAL_RAISE: {

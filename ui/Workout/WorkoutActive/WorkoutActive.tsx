@@ -26,13 +26,7 @@ export namespace WorkoutActive {
 }
 
 export function WorkoutActive(props: WorkoutActive.Props) {
-  const targetVelocity = 600;
-  const stopVelocity = targetVelocity * 0.75;
-  const [sets, save] = createWorkoutIterator({
-    ...props.config,
-    targetVelocity,
-    stopVelocity,
-  });
+  const [sets, save] = createWorkoutIterator(props.config);
   const [workoutState, actions] = createWorkoutService(sets, save);
 
   const leftWeight = () => {
@@ -72,8 +66,6 @@ export function WorkoutActive(props: WorkoutActive.Props) {
       calibrationRepsRemaining={workoutState.calibrationRepsRemaining}
       leftROM={leftROM()}
       rightROM={rightROM()}
-      targetVelocity={targetVelocity}
-      stopVelocity={stopVelocity}
       meanVelocityPerRep={meanVelocityPerRep()}
       totalReps={10}
     />
@@ -101,8 +93,6 @@ export namespace WorkoutActiveView {
     rightROM: number;
     currentRep: number;
     calibrationRepsRemaining: number;
-    targetVelocity: number;
-    stopVelocity: number;
     meanVelocityPerRep: number[];
     totalReps: number;
   }
@@ -142,7 +132,14 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
             <div>{props.calibrationRepsRemaining} reps remaining</div>
           </Show>
           <Show when={props.state === "workout"}>
-            <Show when={props.set.limit === "ASSESSMENT" || props.set.limit === "SPOTTER"}>
+            <Reps
+              targetVelocity={props.set.modeConfig.maxVelocity}
+              stopVelocity={props.set.modeConfig.minVelocity}
+              meanVelocityPerRep={props.meanVelocityPerRep}
+              currentRep={props.currentRep}
+              totalReps={props.totalReps}
+              />
+            {/* <Show when={props.set.limit === "ASSESSMENT" || props.set.limit === "SPOTTER"}>
               <Reps
                 targetVelocity={props.targetVelocity}
                 stopVelocity={props.targetVelocity}
@@ -166,7 +163,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
                   />
                 );
               }}
-            </Show>
+            </Show> */}
           </Show>
           <Show when={props.state === "paused"}>
             <div>Paused</div>
