@@ -110,7 +110,6 @@ class VFormTrainer {
       });
       this._service = await this._server.getPrimaryService(PRIMARY_SERVICE_ID);
       this._setConnected(true);
-      await this._writeCommand(new ArrayBuffer(96));
       await this.stop();
       await this.setColor(0x000000);
     } catch (e) {
