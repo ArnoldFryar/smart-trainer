@@ -65,34 +65,37 @@ class VFormTrainer {
       let abortController: AbortController;
       const devices = await navigator.bluetooth.getDevices();
       const device = devices.find((d) => d.name.startsWith('Vee'));
-      const watchAndConnect = async () => {
-        if (document.hidden) {
-          abortController?.abort();
-        } else {
-          abortController = new AbortController();
-          device.watchAdvertisements({
-            signal: abortController.signal,
-          });
+      if (device) {
+        const watchAndConnect = async () => {
+          if (document.hidden) {
+            abortController?.abort();
+          } else {
+            abortController = new AbortController();
+            device.watchAdvertisements({
+              signal: abortController.signal,
+            });
 
-          await promisifyEvent(device, 'advertisementreceived');
-          document.removeEventListener('visibilitychange', watchAndConnect);
+            await promisifyEvent(device, 'advertisementreceived');
+            document.removeEventListener('visibilitychange', watchAndConnect);
 
-          this._doConnect(device);
-        }
-      };
+            this._doConnect(device);
+          }
+        };
 
-      document.addEventListener("visibilitychange", watchAndConnect);
-      watchAndConnect();
+        document.addEventListener("visibilitychange", watchAndConnect);
+        watchAndConnect();
+      }
     } catch (e) {
       console.log(e);
     }
   }
   async connect() {
     this._setConnected(undefined);
-    this._doConnect(await navigator.bluetooth.requestDevice({
+    const device = await navigator.bluetooth.requestDevice({
       filters: [{ namePrefix: 'Vee' }],
       optionalServices: [PRIMARY_SERVICE_ID],
-    }));
+    });
+    await this._doConnect(device);
   }
   async _doConnect(device: BluetoothDevice) {
     try {
@@ -107,6 +110,7 @@ class VFormTrainer {
       });
       this._service = await this._server.getPrimaryService(PRIMARY_SERVICE_ID);
       this._setConnected(true);
+      await this._writeCommand(new ArrayBuffer(96));
       await this.stop();
       await this.setColor(0x000000);
     } catch (e) {
@@ -130,9 +134,11 @@ class VFormTrainer {
     await this._writeCommand(getStopCommand());
   }
   async _writeCommand(command) {
+    const commandCharacteristic = await this._service.getCharacteristic(CHARACTERISTICS.COMMAND);
+    const method = commandCharacteristic.properties.writeWithoutResponse ? 'writeValueWithoutResponse' : 'writeValueWithResponse';
     await enqueue(
-      await this._service.getCharacteristic(CHARACTERISTICS.COMMAND),
-      'writeValueWithResponse',
+      commandCharacteristic,
+      method,
       command
     );
   }
