@@ -73,6 +73,15 @@ export const EXERCISES: Record<string, Exercise> = {
     equipment: [EQUIPMENT.BAR, EQUIPMENT.BENCH],
     movement: MOVEMENT.HORIZONTAL_PUSH,
   },
+  DB_CHEST_PRESS: {
+    id: "DB_CHEST_PRESS",
+    ratio: avg(
+      156 / BACK_SQUAT_SL, // 0.711
+    ),
+    equipment: [EQUIPMENT.HANDLES, EQUIPMENT.BENCH],
+    mvt: 0.15,
+    movement: MOVEMENT.HORIZONTAL_PUSH,
+  },
   BARBELL_ROW: {
     id: "BARBELL_ROW",
     ratio: avg(
@@ -106,6 +115,16 @@ export const EXERCISES: Record<string, Exercise> = {
     ),
     mvt: 0.2,
     equipment: EQUIPMENT.BAR,
+    movement: MOVEMENT.VERTICAL_PUSH,
+  },
+  DB_SHOULDER_PRESS: {
+    id: "DB_SHOULDER_PRESS",
+    ratio: avg(
+      120 / BACK_SQUAT_SL, // 0.547
+      0.6 * BENCH_SQUAT_RATIO, // 0.450
+    ),
+    mvt: 0.2,
+    equipment: EQUIPMENT.HANDLES,
     movement: MOVEMENT.VERTICAL_PUSH,
   },
   THRUSTER: {
