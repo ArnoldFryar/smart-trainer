@@ -14,5 +14,6 @@ const Template: Story<WorkoutForm.Props> = (args: WorkoutForm.Props) => (
 
 export const Test = Template.bind({});
 Test.args = {
+  config: {},
   exercises: [{}],
 };

@@ -73,11 +73,25 @@ export function Radio(props) {
 
 export function RadioGroup(props) {
   return (
+    <FieldSet label={props.label}>
+      <div class="flex">
+        {props.children.map((child, i) => {
+          const radio = child.querySelector("input[type=radio]");
+          if (radio && (i == 0 || radio.value === String(props.checkedValue))) {
+            radio.checked = true;
+          }
+          return child;
+        })}
+      </div>
+    </FieldSet>
+  );
+}
+
+export function FieldSet(props) {
+  return (
     <fieldset class="my-4">
       <legend class="text-white font-light text-sm mb-1">{props.label}</legend>
-      <div class="flex">
-        {props.children}
-      </div>
+      {props.children}
     </fieldset>
   );
 }

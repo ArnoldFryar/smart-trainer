@@ -1,12 +1,12 @@
-import { Show, createSignal, createResource } from 'solid-js';
+import { Show, createSignal } from 'solid-js';
 import { WorkoutForm } from '../Workout/WorkoutForm/WorkoutForm.js';
 import { WorkoutActive } from '../Workout/WorkoutActive/WorkoutActive.js';
-import { selectExercises } from '../../services/workout/index.js';
 import { Button } from '../_common/Elements/Elements.js';
+import { createLocalSignal } from '../../services/util/signals.js';
 
 export function Workout(props: { onExit: () => void }) {
+  const [previousWorkoutConfig, setPreviousWorkoutConfig] = createLocalSignal("previous-workout", {});
   const [workoutConfig, setWorkoutConfig] = createSignal(null);
-  const [exercises] = createResource(() => selectExercises());
 
   return (
     <>
@@ -15,12 +15,15 @@ export function Workout(props: { onExit: () => void }) {
       </Button>
       <Show when={!workoutConfig()}>
         <WorkoutForm
+          config={previousWorkoutConfig()}
           connected={Trainer.connected()}
-          exercises={exercises()}
           onSubmit={async (config) => {
+            setPreviousWorkoutConfig(config);
+
             if (!Trainer.connected()) {
               await Trainer.connect();
             }
+
             setWorkoutConfig(config);
           }}
         />

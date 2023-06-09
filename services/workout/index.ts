@@ -119,14 +119,14 @@ export const MODE_HANDLERS = {
     };
   },
   [WORKOUT_MODE.ADAPTIVE]: ({ maxVelocity, minVelocity, ratio }) => {
-    const RATE = 10 * ratio;
+    const RATE = 15 * ratio;
     return {
       maxWeight: MAX_WEIGHT,
       maxWeightIncrease: 0,
       weightModulation: {
         concentric: {
-          decrease: { minMmS: minVelocity - 400, maxMmS: minVelocity - 1, ramp: RATE * 0.8 },
-          increase: { minMmS: maxVelocity + 1, maxMmS: maxVelocity + 400, ramp: RATE },
+          decrease: { minMmS: minVelocity - 600, maxMmS: minVelocity - 1, ramp: RATE * 0.8 },
+          increase: { minMmS: maxVelocity + 1, maxMmS: maxVelocity + 600, ramp: RATE },
         },
         eccentric: {
           decrease: { minMmS: -1300, maxMmS: -1200, ramp: 0 },
@@ -346,7 +346,7 @@ export type WorkoutConfig = {
   length: "full" | "short" | "mini";
   superset: boolean;
   users: number;
-  exercises: { main: Exercise[], accessory: Exercise[] };
+  exercises: Array<keyof Exercise>;
 }
 
 export async function selectExercises() {
@@ -368,11 +368,10 @@ export async function selectExercises() {
   // accessories should complement main exercises
   const accessory = [...ACCESSORY_EXERCISES].sort(() => Math.random() - 0.5).slice(0, 3);
 
-  return { 
-    // TODO: remove when wrist is no longer injured
-    main: [EXERCISES.BACK_SQUAT], 
-    accessory: [EXERCISES.BICEP_CURL, EXERCISES.OVERHEAD_TRICEP_EXTENSION]
-  };
+  return [
+    ...main,
+    ...accessory
+  ];
 }
 
 // LENGTH
@@ -382,7 +381,7 @@ export async function selectExercises() {
 export function createWorkoutIterator({ length, exercises, superset, users }: WorkoutConfig, db?: typeof DB) {
   const numSets = length === "full" ? 5 : length === "short" ? 3 : 1;
   const hardReps = 3;
-  const setExercises = exercises.main.concat(exercises.accessory.slice(0, 2));
+  const setExercises = exercises.map(exercise => EXERCISES[exercise]);
   const userData = [{ id:0, hue: 345 }, { id: 1, hue: 190 }, { id:2, hue: 50 }];
 
   const sets = [];
@@ -435,7 +434,7 @@ export function createWorkoutIterator({ length, exercises, superset, users }: Wo
     const exercise = setExercises[exerciseIndex];
     const ratio = exercise.ratio * (1 + setIndex * 0.1);
     const minVelocity = 50 + 1.5 * (1000 * (exercise.mvt ?? 0.25));
-    const maxVelocity = Math.floor((600 + minVelocity) / 2);
+    const maxVelocity = 400 + Math.floor(minVelocity / 2);
     for (let userIndex = 0; userIndex < users; userIndex++) {
       sets.push(() => {
         return {
