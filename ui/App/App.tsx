@@ -3,6 +3,7 @@ import Trainer from '../../services/device/index.js';
 import { Button } from '../_common/Elements/Elements.js';
 import { AppShell } from '../_common/AppShell/AppShell.jsx';
 import { Workout } from '../Workout/Workout.jsx';
+import { Manual } from '../Manual/Manual.jsx';
 
 export function App() {
   const [workout, setWorkout] = createSignal(false);
@@ -15,6 +16,9 @@ export function App() {
         }, {
           label: "Performance",
           view: <div>Performance</div>
+        },  {
+          label: "Manual",
+          view: <Manual/>
         }, {
           label: "Learn",
           view: <div>Learn</div>

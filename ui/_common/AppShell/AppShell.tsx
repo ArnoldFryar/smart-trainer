@@ -4,7 +4,7 @@ export function AppShell(props: { tabs: { label: string, view: any }[] }) {
   const [selectedTab, setSelectedTab] = createSignal(0);
   return (
     <div class="flex flex-col h-screen">
-      <div class="flex-1">
+      <div class="flex-1 overflow-y-auto">
         {props.tabs[selectedTab()].view}
       </div>
       <div class="flex bg-gray-800 justify-center">
