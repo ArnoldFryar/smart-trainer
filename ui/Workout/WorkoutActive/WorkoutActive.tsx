@@ -8,20 +8,16 @@ import { Button } from "../../_common/Elements/Elements.js";
 import { createWorkoutService } from "../../../services/workout/hook.js";
 import {
   createWorkoutIterator,
-  Exercise,
-  Set,
+  SetConfig,
+  WorkoutConfig,
 } from "../../../services/workout/index.js";
 import { calculateMeanVelocity } from "../../../services/workout/util.js";
 import { wakeLock } from "../../../services/util/wake-lock.js";
+import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
 
 export namespace WorkoutActive {
   export interface Props {
-    config: {
-      exercises: { main: Exercise[]; accessory: Exercise[] };
-      length: "full" | "short" | "mini";
-      users: number;
-      superset: boolean;
-    };
+    config: WorkoutConfig;
     onComplete: () => void;
   }
 }
@@ -58,6 +54,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     <WorkoutActiveView
       state={workoutState.state}
       set={workoutState.currentSet}
+      setActivation={workoutState.currentSetActivationConfig}
       onComplete={props.onComplete}
       actions={{ ...actions, complete: props.onComplete }}
       video=""
@@ -70,7 +67,6 @@ export function WorkoutActive(props: WorkoutActive.Props) {
       leftROM={leftROM()}
       rightROM={rightROM()}
       meanVelocityPerRep={meanVelocityPerRep()}
-      totalReps={10}
     />
   );
 }
@@ -78,7 +74,8 @@ export function WorkoutActive(props: WorkoutActive.Props) {
 export namespace WorkoutActiveView {
   export interface Props {
     state: "calibrating" | "rest" | "workout" | "paused" | "complete";
-    set: Set;
+    set: SetConfig;
+    setActivation: ReturnType<typeof WORKOUT_MODE_CONFIGS[keyof typeof WORKOUT_MODE]["getActivationConfig"]>;
     actions: {
       next: () => void;
       prev: () => void;
@@ -97,7 +94,6 @@ export namespace WorkoutActiveView {
     currentRep: number;
     calibrationRepsRemaining: number;
     meanVelocityPerRep: number[];
-    totalReps: number;
   }
 }
 
@@ -136,11 +132,11 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           </Show>
           <Show when={props.state === "workout"}>
             <Reps
-              targetVelocity={props.set.modeConfig.maxVelocity}
-              stopVelocity={props.set.modeConfig.minVelocity}
+              targetVelocity={props.setActivation.meta.maxVelocity}
+              stopVelocity={props.setActivation.meta.minVelocity}
               meanVelocityPerRep={props.meanVelocityPerRep}
               currentRep={props.currentRep}
-              totalReps={props.totalReps}
+              totalReps={props.set.modeConfig.reps}
               />
             {/* <Show when={props.set.limit === "ASSESSMENT" || props.set.limit === "SPOTTER"}>
               <Reps
@@ -290,7 +286,7 @@ export function Reps(props: Reps.Props) {
       <div class="text-right mt-8">
         <div class="">
           <span class="text-gray-100 text-7xl">{props.currentRep}</span>
-          <span class="text-gray-400 text-5xl">/{props.totalReps}</span>
+          <span class="text-gray-400 text-5xl">/{props.totalReps || "?"}</span>
         </div>
         <span class="text-sm font-bold tracking-wider text-gray-500 mx-1">
           REPS
@@ -315,3 +311,4 @@ function InfoButton() {
     </Button>
   );
 }
+

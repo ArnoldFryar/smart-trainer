@@ -9,40 +9,36 @@ import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
 import { promisifyTimeout } from "../util/promisify";
 import { createAbortEffect, reactivePromise } from "../util/signals";
-import {
-  MODE_HANDLERS,
-  LIMIT_HANDLERS,
-  SetConfig,
-  activateSet,
-  Set,
-} from "./index";
+import { SetConfig } from "./index";
+import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
 export type RepSamples = Array<{ concentric?: Sample[]; eccentric?: Sample[] }>;
 export function createWorkoutService(
-  sets: Array<() => Promise<Set>>,
-  save: (set: Set, samples: RepSamples, interrupted?: boolean) => void
+  sets: Array<() => Promise<SetConfig>>,
+  save: (set: SetConfig, samples: RepSamples, interrupted?: boolean) => void
 ) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
   const [currentSetIndex, setCurrentSetIndex] = createSignal(0);
-  const [currentSet] = createResource<Set, number>(currentSetIndex, (i) =>
+  const [currentSet] = createResource<SetConfig, number>(currentSetIndex, (i) =>
     sets[i]()
   );
   const [repSamples, setRepSamples] = createSignal<RepSamples>([]);
-  const currentSetConfig = () => {
-    return {
-      ...MODE_HANDLERS[currentSet().mode](currentSet().modeConfig as any),
-      ...LIMIT_HANDLERS[currentSet().limit](currentSet().limitConfig as any),
-    } as SetConfig;
+  const currentSetActivationConfig = () => {
+    return WORKOUT_MODE_CONFIGS[currentSet().mode].getActivationConfig(currentSet().modeConfig as any);
   };
+  const calibrationReps = () => {
+    // We prefer to end on a concentric rep, so we add 0.5 to the baseline (except for eccentric only mode)
+    return currentSetActivationConfig().reps.repCounts.baseline + (currentSet().mode === WORKOUT_MODE.ECCENTRIC ? 0 : 0.5);
+  }
   const calibrationRepsRemaining = () => {
     const { up, down } = Trainer.reps();
-    return currentSetConfig().calibrationReps - (up + down) / 2;
+    return calibrationReps() - (up + down) / 2;
   };
   const repCount = () => {
     const { up, down } = Trainer.reps();
-    return (up + down) / 2 - currentSetConfig().calibrationReps;
+    return (up + down) / 2 - calibrationReps();
   };
   const next = async () => {
     saveAndResetSamples();
@@ -110,8 +106,8 @@ export function createWorkoutService(
 
         setState("calibrating");
 
-        await activateSet(currentSetConfig());
-        await setUserHue(currentSet().user.hue);
+        await Trainer.activate(currentSetActivationConfig().reps, currentSetActivationConfig().forces);
+        await setUserHue(currentSet().hue);
 
         setLoading(false);
 
@@ -125,7 +121,7 @@ export function createWorkoutService(
 
         setState("workout");
 
-        await currentSetConfig().limit(repCount, repSamples, aborted);
+        await currentSetActivationConfig().limit(repCount, repSamples, aborted);
         await Trainer.stop();
 
         if (currentSetIndex() === sets.length - 1) {
@@ -154,8 +150,8 @@ export function createWorkoutService(
       get currentSetIndex() {
         return currentSetIndex();
       },
-      get currentSetConfig() {
-        return currentSetConfig();
+      get currentSetActivationConfig() {
+        return currentSetActivationConfig();
       },
       get repSamples() {
         return repSamples();

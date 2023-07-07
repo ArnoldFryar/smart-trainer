@@ -67,7 +67,7 @@ export function Manual() {
       const data = new FormData(e.currentTarget);
       const config: typeof DEFAULT_CONFIG = {} as any;
 
-      for (const [key, value] of data.entries()) {
+      for (const [key, value] of (data as any).entries()) {
         const parts = key.split(".");
         const last = parts.pop();
         let obj = config;

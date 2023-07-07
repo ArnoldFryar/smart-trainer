@@ -3,9 +3,10 @@ import { WorkoutForm } from '../Workout/WorkoutForm/WorkoutForm.js';
 import { WorkoutActive } from '../Workout/WorkoutActive/WorkoutActive.js';
 import { Button } from '../_common/Elements/Elements.js';
 import { createLocalSignal } from '../../services/util/signals.js';
+import { WorkoutConfig } from '../../services/workout/index.js';
 
 export function Workout(props: { onExit: () => void }) {
-  const [previousWorkoutConfig, setPreviousWorkoutConfig] = createLocalSignal("previous-workout", {});
+  const [previousWorkoutConfig, setPreviousWorkoutConfig] = createLocalSignal("previous-workout", {} as WorkoutConfig);
   const [workoutConfig, setWorkoutConfig] = createSignal(null);
 
   return (

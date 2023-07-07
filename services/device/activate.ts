@@ -82,8 +82,8 @@ export function getStopCommand() {
 
 export function getForces(
   softMax: number,
-  increment = 0,
-  profile = PRESETS.NEW_SCHOOL
+  profile = PRESETS.NEW_SCHOOL,
+  increment = 0
 ) {
   return {
     ...profile,
