@@ -53,10 +53,21 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     name: "Assess",
     description: "Strength Test",
     getActivationConfig({ e1rm, intensity, reps, time, mvt }) {
-      const hardReps = 3;
-      const rampUp = Math.pow(e1rm, 1.1) / 2;
-      const minVelocity = 50 + 1.5 * (1000 * (mvt ?? 0.25));
+      const [hardReps, multiplier] = {
+        1: [3, 1.75], 
+        2: [3, 1.5], 
+        3: [3, 1.25], 
+        4: [4, 1.5], 
+        5: [4, 1.25], 
+        6: [4, 1.1], 
+        7: [5, 1.25],
+        8: [5, 1.1],
+        9: [5, 1],
+      }[intensity];
+      const rampUp = Math.pow(e1rm, 1.1) / (1 + multiplier);
+      const minVelocity = (30 + 1000 * (mvt ?? 0.25)) * multiplier;
       const maxVelocity = 400 + Math.floor(minVelocity / 2);
+      console.log({ hardReps, minVelocity, maxVelocity });
       return {
         reps: getReps(MAX_REPS),
         forces: getForces(MAX_WEIGHT, {
@@ -71,6 +82,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
         }),
         limit: LIMIT_HANDLERS[WORKOUT_LIMIT.SPOTTER]({ hardReps }),
         meta: {
+          hardReps,
           minVelocity,
           maxVelocity,
         }
@@ -82,6 +94,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     description: "Old School",
     getActivationConfig({ e1rm, intensity, reps, time }) {
       const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, intensity, reps);
+      console.log({ weight })
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -248,14 +261,25 @@ export const LIMIT_HANDLERS: LimitHandlers = {
       return reactivePromise((resolve) => {
         createEffect(() => {
           if (repCount() >= reps) {
+            beepBeepBeep();
             resolve();
+          } else if (repCount() > reps - 3) {
+            beep();
           }
         })
       }, aborted)
     };
   },
   [WORKOUT_LIMIT.TIME]: ({ time }) => {
-    return () => promisifyTimeout(time);
+    const timeMs = time * 1000;
+    return async() => {
+      await promisifyTimeout(timeMs - 2000);
+      beep();
+      await promisifyTimeout(1000);
+      beep();
+      await promisifyTimeout(1000);
+      beepBeepBeep();
+    }
   },
   [WORKOUT_LIMIT.VELOCITY_LOSS]: ({ velocityThreshold = 0.8, minReps = 2 }) => {
     return (repCount, repSamples, aborted) => {
