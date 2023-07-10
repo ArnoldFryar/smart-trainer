@@ -30,6 +30,7 @@ export function WorkoutForm(props: WorkoutForm.Props) {
       reps: parseInt(data.get("reps") as string) || undefined,
       time: parseInt(data.get("time") as string) || undefined,
       sets: parseInt(data.get("sets") as string),
+      intensity: parseInt(data.get("intensity") as string),
       mode: data.get("mode"),
       superset: data.get("superset") === "true",
       users: data.getAll("users"),

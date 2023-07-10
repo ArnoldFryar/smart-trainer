@@ -9,7 +9,7 @@ export const decorators = [
     }
     const root = document.getElementById('storybook-root');
     const solid = document.createElement('div');
-    solid.className = 'bg-gray-900 text-white';
+    solid.className = 'bg-gray-900 text-white h-screen w-screen';
 
     solid.setAttribute('id', 'solid-root');
     root.appendChild(solid);

@@ -4,7 +4,7 @@ import {
   RangeOfMotion,
 } from "../WeightAndRangeOfMotion/WeightAndRangeOfMotion.js";
 import { ExerciseDemonstration } from "../ExerciseDemonstration/ExerciseDemonstration.js";
-import { Button } from "../../_common/Elements/Elements.js";
+import { Button, AutoButton } from "../../_common/Elements/Elements.js";
 import { createWorkoutService } from "../../../services/workout/hook.js";
 import {
   createWorkoutIterator,
@@ -67,6 +67,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
       leftROM={leftROM()}
       rightROM={rightROM()}
       meanVelocityPerRep={meanVelocityPerRep()}
+      setMetrics={workoutState.currentSetMetrics}
     />
   );
 }
@@ -94,6 +95,7 @@ export namespace WorkoutActiveView {
     currentRep: number;
     calibrationRepsRemaining: number;
     meanVelocityPerRep: number[];
+    setMetrics: any;
   }
 }
 
@@ -106,12 +108,22 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
   return (
     <>
       <Show when={props.state === "rest"}>
-        <div>Rest before next set</div>
+        <div class="flex flex-col p-4 h-full">
+          <div class="text-gray-400 uppercase text-center flex-none">Set Complete</div>
+          <pre class="grow text-sm overflow-y-auto">
+            {JSON.stringify(props.setMetrics ?? {}, null, 2)}
+          </pre>
+          <AutoButton timeout={props.set.rest ?? 10000} onClick={props.actions?.next} class="flex-none">Next Set</AutoButton>          
+        </div>
       </Show>
       <Show when={props.state === "complete"}>
-        <div>
-          <div>Workout Complete</div>
-          <Button onClick={props.onComplete}>Finish</Button>
+      <div class="flex flex-col p-4 h-full">
+          <div class="text-gray-400 uppercase text-center flex-none">Workout Complete</div>
+          <pre class="grow text-sm overflow-y-auto">
+            {JSON.stringify(props.setMetrics ?? {}, null, 2)}
+            <div>TODO: Total Joules*, Total Time, Heaviest Weight, #PRs, #Sets</div>
+          </pre>
+          <Button onClick={props.onComplete} class="flex-none">Finish Workout</Button>          
         </div>
       </Show>
       <Show when={active()}>
@@ -132,8 +144,8 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           </Show>
           <Show when={props.state === "workout"}>
             <Reps
-              targetVelocity={props.setActivation.meta.maxVelocity}
-              stopVelocity={props.setActivation.meta.minVelocity}
+              targetVelocity={props.setActivation.display.highVelocity}
+              stopVelocity={props.setActivation.display.lowVelocity}
               meanVelocityPerRep={props.meanVelocityPerRep}
               currentRep={props.currentRep}
               totalReps={props.set.modeConfig.reps}
@@ -204,16 +216,11 @@ export function WorkoutActiveContainer(props: WorkoutActiveContainer.Props) {
         class="relative w-96 h-96 flex justify-center items-center"
         style="margin-bottom:-2rem"
       >
-        <Show when={props.currentRep >= 0}>
-          <Weight
-            weight={props.leftWeight + props.rightWeight}
+        <Weight
+            weight={props.currentRep < 0 ? props.targetWeight * 2 : props.leftWeight + props.rightWeight}
             targetWeight={props.targetWeight * 2}
             unit={props.unit}
           />
-        </Show>
-        <Show when={props.currentRep < 0}>
-          <ExerciseDemonstration video={props.video} />
-        </Show>
         <RangeOfMotion
           class="absolute w-96 h-96"
           leftROM={props.leftROM}
@@ -311,4 +318,3 @@ function InfoButton() {
     </Button>
   );
 }
-

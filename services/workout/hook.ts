@@ -9,14 +9,14 @@ import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
 import { promisifyTimeout } from "../util/promisify";
 import { createAbortEffect, reactivePromise } from "../util/signals";
-import { SetConfig } from "./index";
+import { SetConfig, getSetMetrics } from "./index";
 import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
 export type RepSamples = Array<{ concentric?: Sample[]; eccentric?: Sample[] }>;
 export function createWorkoutService(
   sets: Array<() => Promise<SetConfig>>,
-  save: (set: SetConfig, samples: RepSamples, interrupted?: boolean) => void
+  save: (set: SetConfig, samples: RepSamples, metrics: any, interrupted?: boolean) => void
 ) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
@@ -28,6 +28,7 @@ export function createWorkoutService(
   const currentSetActivationConfig = () => {
     return WORKOUT_MODE_CONFIGS[currentSet().mode].getActivationConfig(currentSet().modeConfig as any);
   };
+  const [currentSetMetrics, setCurrentSetMetrics] = createSignal(null);
   const calibrationReps = () => {
     // We prefer to end on a concentric rep, so we add 0.5 to the baseline (except for eccentric only mode)
     return currentSetActivationConfig().reps.repCounts.baseline + (currentSet().mode === WORKOUT_MODE.ECCENTRIC ? 0 : 0.5);
@@ -61,7 +62,9 @@ export function createWorkoutService(
   };
   const saveAndResetSamples = (interrupted?: boolean) => {
     if (repSamples().length > 0) {
-      save(currentSet(), repSamples(), interrupted);
+      const metrics = getSetMetrics(repSamples());
+      setCurrentSetMetrics(metrics);
+      save(currentSet(), repSamples(), metrics, interrupted);
     }
     setRepSamples([]);
   };
@@ -152,6 +155,9 @@ export function createWorkoutService(
       },
       get currentSetActivationConfig() {
         return currentSetActivationConfig();
+      },
+      get currentSetMetrics() {
+        return currentSetMetrics();
       },
       get repSamples() {
         return repSamples();

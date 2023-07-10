@@ -23,6 +23,56 @@ export function Button(props) {
   );
 }
 
+export function AutoButton(props) {
+  let progressElement!: HTMLDivElement;
+  createEffect(() => {
+    const startTime = Date.now();
+    const progressAnimation = () => {
+      const progress = Math.min((Date.now() - startTime) / props.timeout, 1);
+      progressElement.style.width = `${progress * 100}%`;
+      if (progress < 1) {
+        requestAnimationFrame(progressAnimation);
+      } else {
+        props.onClick?.();
+      }
+    }
+    requestAnimationFrame(progressAnimation);
+  });
+
+  return (
+    <button
+      {...props}
+      class={`
+        relative
+        font-light
+        text-sm
+        px-3.5 
+        py-2 
+        rounded-full 
+        shadow-md
+        border
+        text-white
+        hover:text-white
+        border-primary-500
+        bg-primary-900
+        hover:border-primary-400
+        overflow-hidden
+        ${props.class}
+      `}
+    >
+      <span class="z-[2] relative">{props.children}</span>
+      <span ref={progressElement} class={`
+        z-[1]
+        absolute
+        top-0
+        left-0
+        bottom-0
+        bg-primary-700
+      `}/>
+    </button>
+  );
+}
+
 export function Input(props) {
   return (
     <input

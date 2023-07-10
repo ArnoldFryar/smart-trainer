@@ -39,7 +39,13 @@ type WorkoutModeConfigs = {
       reps: ReturnType<typeof getReps>,
       forces: ReturnType<typeof getForces>,
       limit: LimitFunction;
-      meta?: any;
+      display: {
+        weight?: number;
+        reps?: number;
+        time?: number;
+        lowVelocity?: number;
+        highVelocity?: number;
+      };
     };
   }
 }
@@ -81,10 +87,10 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
           },
         }),
         limit: LIMIT_HANDLERS[WORKOUT_LIMIT.SPOTTER]({ hardReps }),
-        meta: {
+        display: {
           hardReps,
-          minVelocity,
-          maxVelocity,
+          lowVelocity: minVelocity,
+          highVelocity: maxVelocity,
         }
       }
     }
@@ -92,9 +98,9 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.STATIC]: {
     name: "Isotonic",
     description: "Old School",
-    getActivationConfig({ e1rm, intensity, reps, time }) {
+    getActivationConfig({ e1rm, intensity, reps, time, mvt }) {
       const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, intensity, reps);
-      console.log({ weight })
+      console.log({ weight, e1rm, intensity, reps });
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -107,7 +113,12 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -100, maxMmS: -50, ramp: 40 },
           },
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS_FAILURE]({ reps })
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS_FAILURE]({ reps }),
+        display: {
+          weight,
+          reps,
+          lowVelocity: mvt
+        }
       }
     }
   },
@@ -132,7 +143,13 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -100, maxMmS: -50, ramp: rampUp },
           }
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps })
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps }),
+        display: {
+          weight,
+          reps,
+          lowVelocity: spotVelocity,
+          highVelocity: loadVelocity,
+        }
       }
     }
   },
@@ -153,7 +170,11 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -100, maxMmS: -50, ramp: 20 },
           }
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps })
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps }),
+        display: {
+          weight,
+          reps,
+        }
       }
     }
   },
@@ -174,7 +195,13 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -100, maxMmS: -50, ramp: 1 },
           }
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.TIME]({ time })
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.TIME]({ time }),
+        display: {
+          weight,
+          time,
+          lowVelocity: 450,
+          highVelocity: 500
+        }
       }
     }
   },
@@ -195,7 +222,12 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -targetVelocity + 1, maxMmS: 0, ramp: e1rm * 0.4 },
           },
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps })
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps }),
+        display: {
+          reps,
+          lowVelocity: targetVelocity - 1,
+          highVelocity: targetVelocity + 1,
+        }
       }
     }
   },
@@ -216,7 +248,11 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -100, maxMmS: -50, ramp: 40 },
           }
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps })
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps }),
+        display: {
+          weight,
+          reps,
+        }
       }
     }
   },
@@ -239,7 +275,11 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -100, maxMmS: -50, ramp: 0 },
           },
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.ASSESSMENT]({ stopVelocity, minReps: 2, forceThreshold: 0.1 })
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.ASSESSMENT]({ stopVelocity, minReps: 2, forceThreshold: 0.1 }),
+        display: {
+          highVelocity: targetVelocity,
+          lowVelocity: stopVelocity,
+        }
       };
     }
   }

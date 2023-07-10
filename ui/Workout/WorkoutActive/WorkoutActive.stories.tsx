@@ -57,6 +57,14 @@ const Base = {
   state: 'workout',
 };
 
+export const Rest = Template.bind({});
+Rest.args = {
+  ...Base,
+  state: 'rest',
+  calibrationRepsRemaining: 3,
+  currentRep: -3,
+};
+
 export const Warmup = Template.bind({});
 Warmup.args = {
   ...Base,
