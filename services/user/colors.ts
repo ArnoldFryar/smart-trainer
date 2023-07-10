@@ -1,7 +1,12 @@
 export const setUserHue = async (hue: number) => {
   setCssVariables(hue);
   if (Trainer.connected()) {
-    await Trainer.setColor(hslToRgbInt(hue, 0.5, 0.5));
+    const trainerHue = (hue + 10) % 360 / 360;
+    await Trainer.setColorScheme([
+      hslToRgbInt(trainerHue, 0.9, 0.55),
+      hslToRgbInt(trainerHue, 0.9, 0.5),
+      hslToRgbInt(trainerHue, 0.9, 0.4)
+    ]);
   }
 };
 
