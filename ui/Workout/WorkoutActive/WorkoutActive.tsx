@@ -54,7 +54,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     <WorkoutActiveView
       state={workoutState.state}
       set={workoutState.currentSet}
-      setActivation={workoutState.currentSetActivationConfig}
+      setDisplay={workoutState.currentSetActivationConfig.display}
       onComplete={props.onComplete}
       actions={{ ...actions, complete: props.onComplete }}
       video=""
@@ -76,7 +76,7 @@ export namespace WorkoutActiveView {
   export interface Props {
     state: "calibrating" | "rest" | "workout" | "paused" | "complete";
     set: SetConfig;
-    setActivation: ReturnType<typeof WORKOUT_MODE_CONFIGS[keyof typeof WORKOUT_MODE]["getActivationConfig"]>;
+    setDisplay: ReturnType<typeof WORKOUT_MODE_CONFIGS[keyof typeof WORKOUT_MODE]["getActivationConfig"]>["display"];
     actions: {
       next: () => void;
       prev: () => void;
@@ -133,7 +133,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           video=""
           leftWeight={props.leftWeight}
           rightWeight={props.rightWeight}
-          targetWeight={props.targetWeight}
+          targetWeight={props.setDisplay.weight}
           currentRep={props.currentRep}
           leftROM={props.leftROM}
           rightROM={props.rightROM}
@@ -144,8 +144,8 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           </Show>
           <Show when={props.state === "workout"}>
             <Reps
-              targetVelocity={props.setActivation.display.highVelocity}
-              stopVelocity={props.setActivation.display.lowVelocity}
+              targetVelocity={props.setDisplay.highVelocity}
+              stopVelocity={props.setDisplay.lowVelocity}
               meanVelocityPerRep={props.meanVelocityPerRep}
               currentRep={props.currentRep}
               totalReps={props.set.modeConfig.reps}
