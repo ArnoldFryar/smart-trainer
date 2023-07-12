@@ -3,7 +3,6 @@ import {
   Weight,
   RangeOfMotion,
 } from "../WeightAndRangeOfMotion/WeightAndRangeOfMotion.js";
-import { ExerciseDemonstration } from "../ExerciseDemonstration/ExerciseDemonstration.js";
 import { Button, AutoButton } from "../../_common/Elements/Elements.js";
 import { createWorkoutService } from "../../../services/workout/hook.js";
 import {
