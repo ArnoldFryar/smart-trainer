@@ -303,7 +303,7 @@ export const LIMIT_HANDLERS: LimitHandlers = {
           if (repCount() >= reps) {
             beepBeepBeep();
             resolve();
-          } else if (repCount() > reps - 3) {
+          } else if (repCount() > reps - 3 && reps % 1 === 0) {
             beep();
           }
         })
