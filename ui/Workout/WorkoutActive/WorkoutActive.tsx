@@ -10,7 +10,6 @@ import {
   SetConfig,
   WorkoutConfig,
 } from "../../../services/workout/index.js";
-import { calculateMeanVelocity } from "../../../services/workout/util.js";
 import { wakeLock } from "../../../services/util/wake-lock.js";
 import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
 
@@ -42,10 +41,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
     workoutState.state === "calibrating"
       ? -workoutState.calibrationRepsRemaining
       : workoutState.repCount;
-  const meanVelocityPerRep = () =>
-    workoutState.repSamples.map(({ concentric }) =>
-      calculateMeanVelocity(concentric)
-    );
+  const meanVelocityPerRep = () => workoutState.currentSetPhases.filter(p => p.phase === "concentric").map(p => p.velocity.mean);
 
   wakeLock();
 
@@ -116,7 +112,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
         </div>
       </Show>
       <Show when={props.state === "complete"}>
-      <div class="flex flex-col p-4 h-full">
+        <div class="flex flex-col p-4 h-full">
           <div class="text-gray-400 uppercase text-center flex-none">Workout Complete</div>
           <pre class="grow text-sm overflow-y-auto">
             {JSON.stringify(props.setMetrics ?? {}, null, 2)}

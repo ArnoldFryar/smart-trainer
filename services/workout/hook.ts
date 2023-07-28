@@ -9,14 +9,14 @@ import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
 import { promisifyTimeout } from "../util/promisify";
 import { createAbortEffect, reactivePromise } from "../util/signals";
-import { SetConfig, getSetMetrics } from "./index";
+import { SetConfig } from "./index";
 import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
+import { getSetMetrics, splitSamplesByPhase } from "./util";
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
-export type RepSamples = Array<{ concentric?: Sample[]; eccentric?: Sample[] }>;
 export function createWorkoutService(
   sets: Array<() => Promise<SetConfig>>,
-  save: (set: SetConfig, samples: RepSamples, metrics: any, interrupted?: boolean) => void
+  save: (set: SetConfig, samples: Sample[], range: { top: number, bottom: number }, interrupted?: boolean) => void
 ) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
@@ -24,14 +24,23 @@ export function createWorkoutService(
   const [currentSet] = createResource<SetConfig, number>(currentSetIndex, (i) =>
     sets[i]()
   );
-  const [repSamples, setRepSamples] = createSignal<RepSamples>([]);
+  const [currentSetSamples, setCurrentSetSamples] = createSignal<Sample[]>([]);
   const currentSetActivationConfig = () => {
     return WORKOUT_MODE_CONFIGS[currentSet().mode].getActivationConfig(currentSet().modeConfig as any);
   };
-  const [currentSetMetrics, setCurrentSetMetrics] = createSignal(null);
   const calibrationReps = () => {
     // We prefer to end on a concentric rep, so we add 0.5 to the baseline (except for eccentric only mode)
     return currentSetActivationConfig().reps.repCounts.baseline + (currentSet().mode === WORKOUT_MODE.ECCENTRIC ? 0 : 0.5);
+  }
+  const rangeOfMotion = () => {
+    const { rangeTop, rangeBottom } = Trainer.reps();
+    return { top: rangeTop, bottom: rangeBottom };
+  }
+  const currentSetPhases = () => {
+    return splitSamplesByPhase(currentSetSamples(), rangeOfMotion());
+  }
+  const currentSetMetrics = () => {
+    return getSetMetrics(currentSetSamples(), rangeOfMotion());
   }
   const calibrationRepsRemaining = () => {
     const { up, down } = Trainer.reps();
@@ -42,60 +51,35 @@ export function createWorkoutService(
     return (up + down) / 2 - calibrationReps();
   };
   const next = async () => {
-    saveAndResetSamples();
+    saveSet();
     setLoading(true);
     setCurrentSetIndex(currentSetIndex() + 1);
   };
   const prev = async () => {
-    saveAndResetSamples();
+    saveSet();
     setLoading(true);
     setCurrentSetIndex(currentSetIndex() - 1);
   };
   const pause = () => {
-    saveAndResetSamples(true);
+    saveSet(true);
     setState("paused");
     Trainer.stop();
   };
   const resume = () => {
-    saveAndResetSamples();
+    saveSet();
     setState("calibrating");
   };
-  const saveAndResetSamples = (interrupted?: boolean) => {
-    if (repSamples().length > 0) {
-      const metrics = getSetMetrics(repSamples());
-      setCurrentSetMetrics(metrics);
-      save(currentSet(), repSamples(), metrics, interrupted);
+  const saveSet = (interrupted?: boolean) => {
+    if (currentSetSamples().length > 0) {
+      save(currentSet(), currentSetSamples(), rangeOfMotion(), interrupted);
     }
-    setRepSamples([]);
   };
 
   createRenderEffect(() => {
     const rep = Math.floor(repCount());
-    const existingSamples = untrack(repSamples);
-    if (rep >= 0 && rep <= existingSamples.length && state() === "workout") {
-      let phase = Trainer.phase();
-      const newSample = Trainer.sample();
-      const newSamples = [...existingSamples];
-      let currentRep = (newSamples[rep] = newSamples[rep] ?? {});
-      // if the trainer says we're in a new phase,
-      // but the sample velocity disagrees,
-      // put the sample data in the correct phase
-      const combinedVelocity =
-        newSample.left.velocity + newSample.right.velocity;
-      if (
-        !currentRep[phase] &&
-        ((phase === "concentric" && combinedVelocity < 0) ||
-          (phase === "eccentric" && combinedVelocity > 0))
-      ) {
-        phase = phase === "concentric" ? "eccentric" : "concentric";
-        if (!currentRep[phase]) {
-          currentRep = newSamples[rep - 1] ?? {};
-        }
-      }
-      currentRep[phase] = currentRep[phase]
-        ? [...currentRep[phase], newSample]
-        : [newSample];
-      setRepSamples(newSamples);
+    const existingSamples = untrack(currentSetSamples);
+    if (rep >= 0 && state() === "workout") {
+      setCurrentSetSamples([...existingSamples, Trainer.sample()]);
     }
   });
 
@@ -108,6 +92,7 @@ export function createWorkoutService(
         }
 
         setState("calibrating");
+        setCurrentSetSamples([]);
 
         await Trainer.activate(currentSetActivationConfig().reps, currentSetActivationConfig().forces);
         await setUserHue(currentSet().hue);
@@ -124,11 +109,11 @@ export function createWorkoutService(
 
         setState("workout");
 
-        await currentSetActivationConfig().limit(repCount, repSamples, aborted);
+        await currentSetActivationConfig().limit(repCount, currentSetPhases, aborted);
         await Trainer.stop();
+        saveSet();
 
         if (currentSetIndex() === sets.length - 1) {
-          saveAndResetSamples();
           setState("complete");
         } else {
           setState("rest");
@@ -156,11 +141,17 @@ export function createWorkoutService(
       get currentSetActivationConfig() {
         return currentSetActivationConfig();
       },
+      get currentSetSamples() {
+        return currentSetSamples();
+      },
+      get currentSetPhases() {
+        return currentSetPhases();
+      },
       get currentSetMetrics() {
         return currentSetMetrics();
       },
-      get repSamples() {
-        return repSamples();
+      get rangeOfMotion() {
+        return rangeOfMotion();
       },
       get repCount() {
         return repCount();

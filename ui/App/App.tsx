@@ -4,6 +4,7 @@ import { Button } from '../_common/Elements/Elements.js';
 import { AppShell } from '../_common/AppShell/AppShell.jsx';
 import { Workout } from '../Workout/Workout.jsx';
 import { Manual } from '../Manual/Manual.jsx';
+import { Activity } from '../Activity/Activity.jsx';
 
 export function App() {
   const [workout, setWorkout] = createSignal(false);
@@ -12,7 +13,7 @@ export function App() {
       <Show when={!workout()} fallback={<Workout onExit={() => setWorkout(false)}/>}>
         <AppShell tabs={[{
           label: "Activity",
-          view: <Button onClick={() => setWorkout(true)}>Start Workout</Button>
+          view: <Activity startWorkout={() => setWorkout(true)} />
         }, {
           label: "Performance",
           view: <div>Performance</div>

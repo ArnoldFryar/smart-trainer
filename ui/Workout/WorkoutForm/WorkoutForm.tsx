@@ -93,7 +93,7 @@ function UserSelect(props: { value: string[] }) {
     <FieldSet label="Users">
       <div class="flex w-full">
         <For each={usersEntries()}>
-          {([key, user], i) => (
+          {([key, user]) => (
             <label class="group flex flex-col mr-2 cursor-pointer">
               <input type="checkbox" checked={props.value?.includes?.(key)} name="users" value={key} class="hidden peer"/>
               <div class={`

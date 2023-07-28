@@ -1,7 +1,8 @@
-import type DB from "../db/settings.js";
-import { RepSamples } from "./hook";
 import { Exercise, PUSH_EXERCISES, PULL_EXERCISES, LEG_EXERCISES, ACCESSORY_EXERCISES, EXERCISES } from "./exercises";
 import { WORKOUT_MODE } from "./modes";
+import { saveSet } from "../db/settings.js";
+import { getSetMetrics } from "./util.js";
+import { Sample, encodeSamples } from "../device/cables.js";
 
 export type { Exercise };
 
@@ -18,31 +19,6 @@ export type SetConfig = {
   userId: string;
   hue: number;
 };
-
-export function createSetStorage(db: typeof DB) {
-  const workoutID = crypto.randomUUID();
-  const workoutStartTime = Date.now();
-  const sets = [];
-  return async (set, samples) => {
-    const setID = crypto.randomUUID();
-    const setEndTime = Date.now();
-    const tx = db.transaction(["workouts", "sets"], "readwrite");
-    sets.push(setID);
-    tx.objectStore("workouts").add({
-      id: workoutID,
-      time: workoutStartTime,
-      sets,
-    });
-    tx.objectStore("sets").add({
-      workout: workoutID,
-      exercise: set.exercise,
-      time: setEndTime,
-      mode: set.mode,
-      samples
-    });
-    await tx.done;
-  }
-}
 
 export type WorkoutConfig = {
   users: string[];
@@ -98,55 +74,37 @@ export const DEFAULT_USERS = {
   },
 }
 
-export function getSetMetrics(samples) {
-  const reps = samples.filter(s => s.concentric).map(sample => {
-    const forces = sample.concentric.map(c => c.left.force + c.right.force);
-    const velocities = sample.concentric.map(c => Math.abs(c.left.velocity) > Math.abs(c.right.velocity) ? c.left.velocity : c.right.velocity);
-    const powers = sample.concentric.map((c, i) => forces[i] * velocities[i]);
-    return {
-      force: {
-        min: Math.min(...forces),
-        max: Math.max(...forces),
-        mean: forces.reduce((a, b) => a + b, 0) / forces.length,
-        median: forces.sort((a, b) => a - b)[Math.floor(forces.length / 2)],
-      },
-      velocity: {
-        min: Math.min(...velocities),
-        max: Math.max(...velocities),
-        mean: velocities.reduce((a, b) => a + b, 0) / velocities.length,
-        median: velocities.sort((a, b) => a - b)[Math.floor(velocities.length / 2)],
-      },
-      power: {
-        min: Math.min(...powers),
-        max: Math.max(...powers),
-        mean: powers.reduce((a, b) => a + b, 0) / powers.length,
-        median: powers.sort((a, b) => a - b)[Math.floor(powers.length / 2)],
-      },
-      sample
-    }
-  });
-
-  const maxPower = Math.max(...reps.map(r => r.power.max));
-  const maxForce = Math.max(...reps.map(r => r.force.max));
-  const maxMeanPower = Math.max(...reps.map(r => r.power.mean));
-  const maxMinForce = Math.max(...reps.map(r => r.force.min));
-
-  const consideredReps = reps.slice(0, reps.findIndex(r => r.force.min === maxMinForce) + 1);
-
-  const weightedReps = consideredReps.reduce((count, r) => count + Math.pow(r.force.min / maxMinForce, 2), 0);
-  const estimated1rm = maxMinForce * (36 / (37 - weightedReps));
-  const estimated1rm_alt = maxMinForce + consideredReps.reduce((force, r) => force + r.force.mean / 30, 0);
-
-  return { estimated1rm, estimated1rm_alt, maxPower, maxForce, maxMeanPower, maxMinForce, weightedReps, reps };
-}
-
-export function createWorkoutIterator({ sets: numSets, time, mode, reps, intensity, exercises: exerciseIds, superset, users: userIds }: WorkoutConfig, db?: typeof DB) {
+export function createWorkoutIterator({ sets: numSets, time, mode, reps, intensity, exercises: exerciseIds, superset, users: userIds }: WorkoutConfig) {
   const users = DEFAULT_USERS;
+  const workout_id = Math.random() + "";
 
   const sets = [];
-  const save = (set, samples: RepSamples, metrics: ReturnType<typeof getSetMetrics>, interrupted: boolean) => {
-    let data: any = { set, samples, metrics, interrupted };
-    localStorage.setItem("workoutSets", JSON.stringify(JSON.parse(localStorage.getItem("workoutSets") ?? "[]").concat(data).slice(-1000)));
+  const save = (set: SetConfig, samples: Sample[], range: { top: number, bottom: number }, interrupted: boolean) => {
+    const metrics = getSetMetrics(samples, range);
+    const metricKey = set.mode === "ECCENTRIC" ? "eccentric" : "concentric";
+
+    saveSet({
+      user_id: set.userId,
+      workout_id,
+      exercise_id: set.exercise.id,
+      time: Date.now(),
+      mode: set.mode,
+      modeConfig: set.modeConfig,
+      stats: {
+        maxMinForce: metrics[metricKey].maxMinForce,
+        reps: metrics[metricKey].samples.length,
+        e1rm: metrics.e1rm
+      },
+      range,
+      _attachments: {
+        "samples.bin": {
+          content_type: "application/octet-stream",
+          data: new Blob([encodeSamples(samples)])
+        }
+      }
+    }).then(console.log).catch(console.error);
+    // let data: WorkoutSet = { set, samples, metrics, interrupted };
+    // localStorage.setItem("workoutSets", JSON.stringify(JSON.parse(localStorage.getItem("workoutSets") ?? "[]").concat(data).slice(-1000)));
   }
 
   const addSet = (exerciseId: string, setIndex: number) => {

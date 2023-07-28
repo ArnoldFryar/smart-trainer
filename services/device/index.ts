@@ -1,6 +1,6 @@
 import { createSignal } from 'solid-js';
 import { createObservedSignal } from '../util/signals.js';
-import { promisifyEvent, promisifyTimeout } from '../util/promisify.js';
+import { promisifyEvent } from '../util/promisify.js';
 import { enqueue } from '../util/ble-queue.js';
 import { getColorSchemeCommand } from './color.js';
 import { getStopCommand, getActivateCommand } from './activate.js';

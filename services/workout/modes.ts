@@ -2,8 +2,7 @@ import { getForces, getReps } from "../device/activate";
 import { promisifyTimeout } from "../util/promisify.js";
 import { reactivePromise } from '../util/signals.js';
 import { Accessor, createEffect, untrack } from "solid-js";
-import { RepSamples } from "./hook";
-import { calculateMeanVelocity } from "./util";
+import { Phase } from "./util";
 import { beep, beepBeepBeep } from "../util/sounds";
 
 export const WORKOUT_MODE = {
@@ -52,7 +51,7 @@ type WorkoutModeConfigs = {
 type LimitHandlers = {
   [key in keyof typeof WORKOUT_LIMIT]?: (params: any) => LimitFunction;
 }
-type LimitFunction = (repCount: () => number, repSamples: () => RepSamples, abort: Accessor<boolean>) => Promise<any>;
+type LimitFunction = (repCount: () => number, phases: () => Phase[], abort: Accessor<boolean>) => Promise<any>;
 
 export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ADAPTIVE]: {
@@ -297,7 +296,7 @@ export const WORKOUT_LIMIT = {
 
 export const LIMIT_HANDLERS: LimitHandlers = {
   [WORKOUT_LIMIT.REPS]: ({ reps }) => {
-    return (repCount, repSamples, aborted) => {
+    return (repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
         createEffect(() => {
           if (repCount() >= reps) {
@@ -322,9 +321,10 @@ export const LIMIT_HANDLERS: LimitHandlers = {
     }
   },
   [WORKOUT_LIMIT.VELOCITY_LOSS]: ({ velocityThreshold = 0.8, minReps = 2 }) => {
-    return (repCount, repSamples, aborted) => {
+    return (repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
-        const repVelocities = () => repSamples().map((rep) => calculateMeanVelocity(rep.concentric));
+        const concentricReps = () => phases().filter(p => p.phase === "concentric");
+        const repVelocities = () => concentricReps().map((rep) => rep.velocity.mean);
         const bestVelocity = () => Math.max(...repVelocities());
         const lastVelocity = () => repVelocities()[Math.floor(repCount() - 1)];
         createEffect(() => {
@@ -336,17 +336,15 @@ export const LIMIT_HANDLERS: LimitHandlers = {
     };
   },
   [WORKOUT_LIMIT.ASSESSMENT]: ({ stopVelocity, minReps = 2, forceThreshold = 0.1 }) => {
-    return (repCount, repSamples, aborted) => {
+    return (repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
-        const prevRep = (i: number) => repSamples()[Math.floor(repCount() - i)];
-        const prevForce = (i: number) => Math.max(...prevRep(i).concentric.map(c => Math.max(c.left.force, c.right.force)));
-        const prevMeanVelocity = (i: number) => prevRep(i)
-          ? calculateMeanVelocity(prevRep(i).concentric)
-          : Infinity;
+        const concentricReps = () => phases().filter(p => p.phase === "concentric");
+        const prevRep = (i: number) => concentricReps()[Math.floor(repCount() - i)];
+        const prevForce = (i: number) => prevRep(i)?.force.max ?? 0;
+        const prevMeanVelocity = (i: number) => prevRep(i)?.velocity.mean ?? Infinity;
         createEffect(() => {
           if (repCount() >= minReps) {
-            const difference = repCount() >= 3 ? Math.abs(prevForce(1) - prevForce(2)) : Infinity;
-            if (difference <= forceThreshold) {
+            if (Math.abs(prevForce(1) - prevForce(2)) <= forceThreshold) {
               resolve();
             } else if (prevMeanVelocity(1) <= stopVelocity) {
               resolve();
@@ -357,18 +355,16 @@ export const LIMIT_HANDLERS: LimitHandlers = {
     };
   },
   [WORKOUT_LIMIT.SPOTTER]: ({ hardReps = 3 }) => {
-    return (repCount, repSamples, aborted) => {
+    return (repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
-        const prevRep = (i: number) => repSamples()[Math.floor(repCount() - i)];
-        const minForce = (rep: RepSamples[number]) => Math.min(...rep.concentric.map(c => Math.max(c.left.force, c.right.force)));
-        const maxMinForce = () => Math.max(...repSamples().filter(rep => rep.concentric).map(rep => minForce(rep)));
+        const concentricReps = () => phases().filter(p => p.phase === "concentric");
+        const prevRep = (i: number) => concentricReps()[Math.floor(repCount() - i)];
+        const maxMinForce = () => Math.max(...concentricReps().map(rep => rep.force.min));
         let currentHardReps = 0;
         createEffect(() => {
           if (repCount() >= 3 && repCount() % 1 === 0) {
             untrack(() => {
-              const prevForce = minForce(prevRep(1));
-              const target = maxMinForce();
-              if (prevForce < target) {
+              if (prevRep(1).force.min < maxMinForce()) {
                 if (++currentHardReps === hardReps) {
                   console.log("done");
                   beepBeepBeep();
@@ -388,7 +384,7 @@ export const LIMIT_HANDLERS: LimitHandlers = {
     };
   },
   [WORKOUT_LIMIT.FAILURE]: ({ expectedPause = 1, warningCount = 3 }) => {
-    return (repCount, repSamples, aborted) => {
+    return (repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
         let struggleStart = null;
         let currentWarningCount = 0;
@@ -423,10 +419,10 @@ export const LIMIT_HANDLERS: LimitHandlers = {
   [WORKOUT_LIMIT.REPS_FAILURE]: (options) => {
     const reps = LIMIT_HANDLERS[WORKOUT_LIMIT.REPS](options);
     const failure = LIMIT_HANDLERS[WORKOUT_LIMIT.FAILURE](options);
-    return (repCount, repSamples, aborted) => {
+    return (repCount, phases, aborted) => {
       return Promise.race([
-        reps(repCount, repSamples, aborted),
-        failure(repCount, repSamples, aborted)
+        reps(repCount, phases, aborted),
+        failure(repCount, phases, aborted)
       ])
     };
   }

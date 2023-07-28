@@ -58,8 +58,6 @@ const DEFAULT_CONFIG = {
 export function Manual() {
   const [activateConfig, setActivateConfig] = createLocalSignal("manual-activate-config", DEFAULT_CONFIG);
 
-  console.log(activateConfig());
-
   return (
     <form class="flex flex-col" onSubmit={async (e) => {
       e.preventDefault();

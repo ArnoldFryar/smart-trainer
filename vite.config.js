@@ -8,4 +8,7 @@ export default defineConfig({
     basicSsl(),
     solidPlugin({ hot: false })
   ],
+  define: {
+    global: "window"
+  }
 });

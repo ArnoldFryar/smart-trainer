@@ -10,7 +10,7 @@ export const setUserHue = async (hue: number) => {
   }
 };
 
-window.setUserHue = setUserHue;
+(window as any).setUserHue = setUserHue;
 
 function setCssVariables(hue: number) {
   let secondaryHue;
