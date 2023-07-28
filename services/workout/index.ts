@@ -72,6 +72,11 @@ export const DEFAULT_USERS = {
     hue: 180,
     squat: 4
   },
+  "DAVID": {
+    name: "David",
+    hue: 40,
+    squat: 25
+  },
 }
 
 export function createWorkoutIterator({ sets: numSets, time, mode, reps, intensity, exercises: exerciseIds, superset, users: userIds }: WorkoutConfig) {
