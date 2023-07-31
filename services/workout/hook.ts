@@ -7,7 +7,6 @@ import {
 } from "solid-js";
 import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
-import { promisifyTimeout } from "../util/promisify";
 import { createAbortEffect, reactivePromise } from "../util/signals";
 import { SetConfig } from "./index";
 import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
@@ -69,9 +68,12 @@ export function createWorkoutService(
     saveSet();
     setState("calibrating");
   };
+  const savedSamples: WeakSet<Sample[]> = new WeakSet();
   const saveSet = (interrupted?: boolean) => {
-    if (currentSetSamples().length > 0) {
-      save(currentSet(), currentSetSamples(), rangeOfMotion(), interrupted);
+    const samples = currentSetSamples();
+    if (samples.length > 0 && !savedSamples.has(samples)) {
+      save(currentSet(), samples, rangeOfMotion(), interrupted);
+      savedSamples.add(samples);
     }
   };
 
@@ -117,8 +119,6 @@ export function createWorkoutService(
           setState("complete");
         } else {
           setState("rest");
-          await promisifyTimeout(currentSet().rest ?? 10000);
-          next();
         }
       });
     }

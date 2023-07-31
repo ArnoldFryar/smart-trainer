@@ -25,19 +25,23 @@ export function Button(props) {
 
 export function AutoButton(props) {
   let progressElement!: HTMLDivElement;
+  let animationFrame: number | undefined;
+
   createEffect(() => {
     const startTime = Date.now();
     const progressAnimation = () => {
       const progress = Math.min((Date.now() - startTime) / props.timeout, 1);
       progressElement.style.width = `${progress * 100}%`;
       if (progress < 1) {
-        requestAnimationFrame(progressAnimation);
+        animationFrame = requestAnimationFrame(progressAnimation);
       } else {
         props.onClick?.();
       }
     }
-    requestAnimationFrame(progressAnimation);
+    animationFrame = requestAnimationFrame(progressAnimation);
   });
+
+  onCleanup(() => cancelAnimationFrame(animationFrame));
 
   return (
     <button
