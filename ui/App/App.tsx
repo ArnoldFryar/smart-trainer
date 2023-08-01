@@ -1,38 +1,31 @@
-import { Show, createSignal } from 'solid-js';
+import { Show } from 'solid-js';
 import Trainer from '../../services/device/index.js';
 import { Button } from '../_common/Elements/Elements.js';
-import { AppShell } from '../_common/AppShell/AppShell.jsx';
-import { Workout } from '../Workout/Workout.jsx';
-import { Manual } from '../Manual/Manual.jsx';
-import { Activity } from '../Activity/Activity.jsx';
+import { AppShell } from "../_common/AppShell/AppShell";
+
+import { lazy } from "solid-js";
+import { Routes, Route, Router, Navigate, hashIntegration } from "@solidjs/router";
+
+const Activity = lazy(() => import("../Activity/Activity.js"));
+const Manual = lazy(() => import("../Manual/Manual.js"));
+const Workout = lazy(() => import("../Workout/Workout.js"));
 
 export function App() {
-  const [workout, setWorkout] = createSignal(false);
   return (
-    <>
-      <Show when={!workout()} fallback={<Workout onExit={() => setWorkout(false)}/>}>
-        <AppShell tabs={[{
-          label: "Activity",
-          view: <Activity startWorkout={() => setWorkout(true)} />
-        }, {
-          label: "Performance",
-          view: <div>Performance</div>
-        },  {
-          label: "Manual",
-          view: <Manual/>
-        }, {
-          label: "Learn",
-          view: <div>Learn</div>
-        }, {
-          label: "Settings",
-          view: <div>
-            <h1>Settings</h1>
-            <ConnectButton />
-          </div>
-        }]} />
-      </Show>
+    <Router source={hashIntegration()}>
+      <Routes>
+        <Route path="/" component={AppShell}>
+          <Route path="/" component={() => <Navigate href="/activity" />} />
+          <Route path="/activity" component={Activity}/>
+          <Route path="/performance" component={() => <div>Performance</div>}/>
+          <Route path="/manual" component={Manual}/>
+          <Route path="/learn" component={() => <div>Learn</div>}/>
+          <Route path="/settings" component={() => <div>Settings <ConnectButton/></div>}/>
+        </Route>
+        <Route path="/workout" component={Workout}/>
+      </Routes>
       <Debug />
-    </>
+    </Router>
   );
 }
 

@@ -2,8 +2,10 @@ import { For, createResource } from 'solid-js';
 import { Button } from '../_common/Elements/Elements.js';
 import { getSets } from '../../services/db/settings.js';
 import { WORKOUT_MODE_CONFIGS } from '../../services/workout/modes.js';
+import { useNavigate } from '@solidjs/router';
 
-export function Activity(props: { startWorkout: () => void }) {
+export default function Activity(props: { startWorkout: () => void }) {
+  const navigate = useNavigate();
   const [sets] = createResource(() => {
     return getSets("MICHAEL");
   });
@@ -21,7 +23,7 @@ export function Activity(props: { startWorkout: () => void }) {
           </div>
         )}</For>
       </div>
-      <Button onClick={props.startWorkout}>Start Workout</Button>      
+      <Button onClick={() => navigate("/workout")}>Start Workout</Button>      
     </div>
   );
 }

@@ -1,29 +1,35 @@
-import { createSignal, For } from "solid-js"
+import { A, Outlet } from "@solidjs/router";
 
-export function AppShell(props: { tabs: { label: string, view: any }[] }) {
-  const [selectedTab, setSelectedTab] = createSignal(0);
+export function AppShell(props) {
   return (
     <div class="flex flex-col h-screen">
       <div class="flex-1 overflow-y-auto">
-        {props.tabs[selectedTab()].view}
+        <Outlet/>
       </div>
       <div class="flex bg-gray-800 justify-center">
-        <For each={props.tabs}>
-          {(tab, index) => (
-            <NavItem selected={index() === selectedTab()} onClick={() => setSelectedTab(index())}>
-              {tab.label}
-            </NavItem>
-          )}
-        </For>
+        <NavItem href="/activity">
+          Activity
+        </NavItem>
+        <NavItem href="/performance">
+          Performance
+        </NavItem>
+        <NavItem href="/manual">
+          Manual
+        </NavItem>
+        <NavItem href="/learn">
+          Learn
+        </NavItem>
+        <NavItem href="/settings">
+          Settings
+        </NavItem>
       </div>
     </div>
   )
 }
-
 function NavItem(props) {
   return (
-    <div onClick={props.onClick} class={`p-4 font-medium ${props.selected ? "text-primary-500" : "text-gray-500 hover:text-gray-400 cursor-pointer"}`}>
+    <A href={props.href} class="p-4 font-medium" activeClass="text-primary-500" inactiveClass="text-gray-500 hover:text-gray-400 cursor-pointer">
       {props.children}
-    </div>
+    </A>
   )
 }

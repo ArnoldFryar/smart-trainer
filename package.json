@@ -28,6 +28,7 @@
     "vite-plugin-solid": "^2.3.3"
   },
   "dependencies": {
+    "@solidjs/router": "^0.8.2",
     "events": "^3.3.0",
     "idb": "^7.1.0",
     "pouchdb": "^8.0.1",

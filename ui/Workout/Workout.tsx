@@ -4,14 +4,16 @@ import { WorkoutActive } from '../Workout/WorkoutActive/WorkoutActive.js';
 import { Button } from '../_common/Elements/Elements.js';
 import { createLocalSignal } from '../../services/util/signals.js';
 import { WorkoutConfig } from '../../services/workout/index.js';
+import { useNavigate } from '@solidjs/router';
 
-export function Workout(props: { onExit: () => void }) {
+export default function Workout(props: { onExit: () => void }) {
+  const navigate = useNavigate();
   const [previousWorkoutConfig, setPreviousWorkoutConfig] = createLocalSignal("previous-workout", {} as WorkoutConfig);
   const [workoutConfig, setWorkoutConfig] = createSignal(null);
 
   return (
     <>
-      <Button class="absolute top-4 right-4" onClick={() => props.onExit()}>
+      <Button class="absolute top-4 right-4" onClick={() => navigate("/")}>
         Exit
       </Button>
       <Show when={!workoutConfig()}>
@@ -33,7 +35,7 @@ export function Workout(props: { onExit: () => void }) {
         <WorkoutActive
           config={workoutConfig()}
           onComplete={() => {
-            props.onExit();
+            navigate("/");
           }}
         />
       </Show>

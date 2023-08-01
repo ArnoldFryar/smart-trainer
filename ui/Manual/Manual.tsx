@@ -55,7 +55,7 @@ const DEFAULT_CONFIG = {
   }
 }
 
-export function Manual() {
+export default function Manual() {
   const [activateConfig, setActivateConfig] = createLocalSignal("manual-activate-config", DEFAULT_CONFIG);
 
   return (
