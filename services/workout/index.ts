@@ -26,9 +26,11 @@ export type WorkoutConfig = {
   exercises: Array<keyof Exercise>;
   mode: keyof typeof WORKOUT_MODE;
   sets: number;
-  reps: number;
-  time: number;
-  intensity: number;
+  reps?: number;
+  time?: number;
+  rir?: number;
+  forcedReps?: number;
+  assistance?: number;
 }
 
 export async function selectExercises() {
@@ -79,7 +81,7 @@ export const DEFAULT_USERS = {
   },
 }
 
-export function createWorkoutIterator({ sets: numSets, time, mode, reps, intensity, exercises: exerciseIds, superset, users: userIds }: WorkoutConfig) {
+export function createWorkoutIterator({ sets: numSets, mode, exercises: exerciseIds, superset, users: userIds, ...modeConfig }: WorkoutConfig) {
   const users = DEFAULT_USERS;
   const workout_id = Math.random() + "";
 
@@ -123,7 +125,7 @@ export function createWorkoutIterator({ sets: numSets, time, mode, reps, intensi
           userId,
           hue: user.hue,
           mode,
-          modeConfig: { e1rm, intensity, reps, time, setIndex, mvt: exercise.mvt },
+          modeConfig: { e1rm, setIndex, mvt: exercise.mvt, ...modeConfig },
           rest: 10000,
         }
       });

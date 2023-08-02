@@ -34,7 +34,7 @@ type WorkoutModeConfigs = {
   [key in keyof typeof WORKOUT_MODE]?: {
     name: string;
     description: string;
-    getActivationConfig: (params: { e1rm: number, intensity: number, reps: number, time: number, mvt?: number }) => {
+    getActivationConfig: (params: { e1rm: number, forcedReps: number, assistance: number, rir: number, reps: number, time: number, mvt?: number }) => {
       reps: ReturnType<typeof getReps>,
       forces: ReturnType<typeof getForces>,
       limit: LimitFunction;
@@ -57,22 +57,12 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ADAPTIVE]: {
     name: "Assess",
     description: "Strength Test",
-    getActivationConfig({ e1rm, intensity, reps, time, mvt }) {
-      const [hardReps, multiplier] = {
-        1: [3, 1.75], 
-        2: [3, 1.5], 
-        3: [3, 1.25], 
-        4: [4, 1.5], 
-        5: [4, 1.25], 
-        6: [4, 1.1], 
-        7: [5, 1.25],
-        8: [5, 1.1],
-        9: [5, 1],
-      }[intensity];
-      const rampUp = Math.pow(e1rm, 1.1) / (1 + multiplier);
-      const minVelocity = (30 + 1000 * (mvt ?? 0.25)) * multiplier;
+    getActivationConfig({ e1rm, forcedReps, assistance, mvt }) {
+      const multiplier = assistance / 10;
+      const rampUp = Math.pow(e1rm, 1.1) / 2.5;
+      const minVelocity = 20 + (1000 * 2 * (mvt ?? 0.25) * multiplier);
       const maxVelocity = 400 + Math.floor(minVelocity / 2);
-      console.log({ hardReps, minVelocity, maxVelocity });
+      console.log({ rampUp, minVelocity, maxVelocity });
       return {
         reps: getReps(MAX_REPS),
         forces: getForces(MAX_WEIGHT, {
@@ -85,9 +75,9 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             increase: { minMmS: -100, maxMmS: -50, ramp: 0 },
           },
         }),
-        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.SPOTTER]({ hardReps }),
+        limit: LIMIT_HANDLERS[WORKOUT_LIMIT.SPOTTER]({ forcedReps }),
         display: {
-          hardReps,
+          forcedReps,
           lowVelocity: minVelocity,
           highVelocity: maxVelocity,
         }
@@ -97,9 +87,8 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.STATIC]: {
     name: "Isotonic",
     description: "Old School",
-    getActivationConfig({ e1rm, intensity, reps, time, mvt }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, intensity, reps);
-      console.log({ weight, e1rm, intensity, reps });
+    getActivationConfig({ e1rm, rir, reps, mvt }) {
+      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, rir, reps);
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -124,11 +113,11 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.TUT]: {
     name: "TUT",
     description: "Time Under Tension",
-    getActivationConfig({ e1rm, intensity, reps, time }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, intensity, reps);
+    getActivationConfig({ e1rm, assistance, reps, forcedReps }) {
+      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, 0, reps - forcedReps);
       const rampDown = 2 * Math.pow(weight, 1/3);
-      const rampUp = rampDown * (1.5 + intensity / 10 * 3);
-      const spotVelocity = 200 + (1 - intensity / 10) * 200;
+      const rampUp = rampDown * (1.5 + (1 - assistance / 10) * 3);
+      const spotVelocity = 200 + (assistance / 10) * 200;
       const loadVelocity = spotVelocity + 100;
       return {
         reps: getReps(reps),
@@ -155,8 +144,8 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ECCENTRIC]: {
     name: "Eccentric",
     description: "Eccentric Only",
-    getActivationConfig({ e1rm, intensity, reps, time }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, intensity, reps);
+    getActivationConfig({ e1rm, reps, rir }) {
+      const weight = getAppropriateWeight(WORKOUT_MODE.ECCENTRIC, e1rm, rir, reps);
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -180,8 +169,8 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.PUMP]: {
     name: "Pump",
     description: "Power Output",
-    getActivationConfig({ e1rm, intensity, reps, time }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.PUMP, e1rm, intensity, reps);
+    getActivationConfig({ e1rm, time }) {
+      const weight = getAppropriateWeight(WORKOUT_MODE.PUMP, e1rm, 0, Math.pow(time, 0.75));
       return {
         reps: getReps(MAX_REPS),
         forces: getForces(weight, {
@@ -199,7 +188,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
           weight,
           time,
           lowVelocity: 450,
-          highVelocity: 500
+          highVelocity: 600
         }
       }
     }
@@ -207,8 +196,8 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ISOKINETIC]: {
     name: "Isokinetic",
     description: "Constant Velocity",
-    getActivationConfig({ e1rm, intensity, reps, time }) {
-      const targetVelocity = 200 + (1 - intensity / 10) * 200;
+    getActivationConfig({ e1rm, reps }) {
+      const targetVelocity = 200 /* + (1 - intensity / 10) * 200 */;
       return {
         reps: getReps(reps),
         forces: getForces(MAX_WEIGHT, {
@@ -233,8 +222,8 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.CONCENTRIC]: {
     name: "Concentric",
     description: "Concentric Only",
-    getActivationConfig({ e1rm, intensity, reps, time }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.CONCENTRIC, e1rm, intensity, reps + 10);
+    getActivationConfig({ e1rm, rir, reps }) {
+      const weight = getAppropriateWeight(WORKOUT_MODE.CONCENTRIC, e1rm, rir, reps + 10);
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -258,12 +247,12 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ASSESSMENT]: {
     name: "Assessment",
     description: "Assessment",
-    getActivationConfig({ e1rm, intensity, reps, time }) {
+    getActivationConfig({ e1rm }) {
       const rampUp = Math.pow(e1rm, 1.1) / 2;
-      const targetVelocity = 200 + (1 - intensity / 10) * 200;
+      const targetVelocity = 200 /* + (1 - intensity / 10) * 200 */;
       const stopVelocity = targetVelocity - 50;
       return {
-        reps: getReps(reps),
+        reps: getReps(MAX_REPS),
         forces: getForces(MAX_WEIGHT, {
           concentric: {
             decrease: { minMmS: 0, maxMmS: 0, ramp: 0 },
@@ -428,11 +417,8 @@ export const LIMIT_HANDLERS: LimitHandlers = {
   }
 } as const;
 
-const minRir = 4; // number reps in reserve when intensity is 0
-
-function getAppropriateWeight(mode, e1rm, intensity, repCount = 15 /* default for pump */) {
-  const e1rmMultiplier = mode === "eccentric" ? 1.4 : mode === "tut" ? 1.2 : 1;
-  const rir = minRir - intensity * 0.5;
+function getAppropriateWeight(mode, e1rm, rir, repCount = 15 /* default for pump */) {
+  const e1rmMultiplier = mode === "eccentric" ? 1.4 : 1;
   const repMax = repCount + rir;
   return getMaxWeight(e1rm * e1rmMultiplier, repMax);
 }

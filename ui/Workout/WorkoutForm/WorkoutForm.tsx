@@ -27,10 +27,12 @@ export function WorkoutForm(props: WorkoutForm.Props) {
     e.preventDefault();
     const data = new FormData(e.target);
     props.onSubmit({
-      reps: parseInt(data.get("reps") as string) || undefined,
-      time: parseInt(data.get("time") as string) || undefined,
+      reps: parseInt(data.get("reps") as string) ?? undefined,
+      time: parseInt(data.get("time") as string) ?? undefined,
+      forcedReps: parseInt(data.get("forcedReps") as string) ?? undefined,
+      assistance: parseInt(data.get("assistance") as string) ?? undefined,
+      rir: parseInt(data.get("rir") as string) ?? undefined,
       sets: parseInt(data.get("sets") as string),
-      intensity: parseInt(data.get("intensity") as string),
       mode: data.get("mode"),
       superset: data.get("superset") === "true",
       users: data.getAll("users"),
@@ -65,11 +67,21 @@ export function WorkoutForm(props: WorkoutForm.Props) {
           <Slider name="time" value={props.config.time ?? 30} max={120} min={10} step={10}/>
         </FieldSet>
       </Show>
+      <Show when={mode() === WORKOUT_MODE.ADAPTIVE || mode() === WORKOUT_MODE.TUT}>
+        <FieldSet label="Forced Reps">
+          <Slider name="forcedReps" value={props.config.forcedReps ?? 3} max={10} min={1}/>
+        </FieldSet>
+        <FieldSet label="Assistance">
+          <Slider name="assistance" value={props.config.assistance ?? 3} max={10} min={0}/>
+        </FieldSet>
+      </Show>
+      <Show when={mode() === WORKOUT_MODE.STATIC || mode() === WORKOUT_MODE.ECCENTRIC}>
+        <FieldSet label="Reps in Reserve">
+          <Slider name="rir" value={props.config.rir ?? 3} max={10} min={0}/>
+        </FieldSet>
+      </Show>
       <FieldSet label="Sets">
         <Slider name="sets" value={props.config.sets ?? 3} max={10} min={1}/>
-      </FieldSet>
-      <FieldSet label="Intensity">
-        <Slider name="intensity" value={props.config.intensity ?? 3} max={9} min={1}/>
       </FieldSet>
       <ExerciseSelect defaultValue={props.config.exercises} mode={mode()} />
       <RadioGroup label="Superset" checkedValue={props.config.superset}>
