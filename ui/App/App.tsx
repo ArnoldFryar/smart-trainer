@@ -9,6 +9,7 @@ import { Routes, Route, Router, Navigate, hashIntegration } from "@solidjs/route
 const Activity = lazy(() => import("../Activity/Activity.js"));
 const Manual = lazy(() => import("../Manual/Manual.js"));
 const Workout = lazy(() => import("../Workout/Workout.js"));
+const AnalyzeSet = lazy(() => import("../AnalyzeSet/AnalyzeSet.js"));
 
 export function App() {
   return (
@@ -23,6 +24,7 @@ export function App() {
           <Route path="/settings" component={() => <div>Settings <ConnectButton/></div>}/>
         </Route>
         <Route path="/workout" component={Workout}/>
+        <Route path="/set/:setId" component={AnalyzeSet}/>
       </Routes>
       <Debug />
     </Router>

@@ -218,7 +218,7 @@ export function getSetMetrics(samples: Sample[], range: Range) {
       meanVelocity: concentric.reduce((a, b) => a + b.velocity.mean, 0) / concentric.length,
       maxPower: Math.max(...concentric.map(p => p.velocity.max * p.force.max)),
       meanPower: concentric.reduce((a, b) => a + b.velocity.mean * b.force.mean, 0) / concentric.length,
-      velocityLoss: Math.max(...concentric.map(p => p.velocity.mean)) - concentric[concentric.length - 1].velocity.mean,
+      velocityLoss: Math.max(...concentric.map(p => p.velocity.mean)) - concentric[concentric.length - 1]?.velocity.mean,
       work: concentric.reduce((a, b) => a + b.velocity.mean * b.force.mean, 0),
       repsMaxes: getRepMaxes(concentric, concentric),
       samples: concentric
@@ -259,14 +259,23 @@ function getEstimated1RepMax(concentric: Phase[]) {
   return estimated1rm;
 }
 
-function getRepMaxes(concentric: Phase[], eccentric: Phase[]): Record<number, number> {
+function getRepMaxes(concentric: Phase[], eccentric: Phase[]): Record<number | "e1rm" | "best", number> {
   let start = 0;
   let end = concentric.length - 1;
-  const repMaxes = {};
+  const repMaxes = {
+    e1rm: 0,
+    best: 0,
+  };
 
   while (start < end) {
     const lowestForce = Math.min(...concentric.slice(start, end).map(p => p.force.min), ...eccentric.slice(start, end).map(p => p.force.min));
-    repMaxes[end - start + 1] = lowestForce;
+    const reps = end - start + 1;
+    const e1rm = lowestForce * (36 / (37 - reps));
+    repMaxes[reps] = lowestForce;
+    if (e1rm > repMaxes.e1rm) {
+      repMaxes.e1rm = e1rm;
+      repMaxes.best = reps;
+    }
     if (Math.min(concentric[start].force.min, eccentric[start].force.min) < Math.min(concentric[end].force.min, eccentric[end].force.min)) {
       start++;
     } else {

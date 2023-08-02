@@ -1,6 +1,7 @@
 import PouchDB from 'pouchdb';
 import PouchFind from 'pouchdb-find';
 import { SetConfig } from '../workout';
+import { Sample, decodeSamples } from '../device/cables';
 PouchDB.plugin(PouchFind);
 
 interface PouchDBBaseDocument {
@@ -124,6 +125,15 @@ export async function getSets(user_id: string) {
     
   });
   return sets as WorkoutSet[];
+}
+
+export async function getSet(set_id: string): Promise<WorkoutSet> {
+  return await db.get(set_id);
+}
+
+export async function getSetSamples(set_id: string): Promise<Sample[]> {
+  const samplesBlob = await db.getAttachment(set_id, "samples.bin") as Blob;
+  return decodeSamples(await samplesBlob.arrayBuffer());
 }
 
 export async function saveSet(set: PartialSchema<WorkoutSet>) {

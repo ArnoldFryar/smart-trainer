@@ -10,7 +10,7 @@ export type Sample = {
   right: Cable
 };
 
-export function parseSample(dataview?: DataView): Sample {
+export function parseSample(dataview?: DataView, littleEndian: boolean = true): Sample {
   if (!dataview?.byteLength) {
     return {
       left: { position: 0, velocity: 0, force: 0 },
@@ -20,16 +20,16 @@ export function parseSample(dataview?: DataView): Sample {
   }
 
   return {
-    time: dataview.getUint32(0, true),
+    time: dataview.getUint32(0, littleEndian),
     left: {
-      position: dataview.getInt16(4, true) / 10,
-      velocity: dataview.getInt16(6, true),
-      force: dataview.getInt16(8, true) / 100,
+      position: dataview.getInt16(4, littleEndian) / 10,
+      velocity: dataview.getInt16(6, littleEndian),
+      force: dataview.getInt16(8, littleEndian) / 100,
     },
     right: {
-      position: dataview.getInt16(10, true) / 10,
-      velocity: dataview.getInt16(12, true),
-      force: dataview.getInt16(14, true) / 100,
+      position: dataview.getInt16(10, littleEndian) / 10,
+      velocity: dataview.getInt16(12, littleEndian),
+      force: dataview.getInt16(14, littleEndian) / 100,
     },
   };
 }
@@ -64,7 +64,7 @@ export function encodeSamples(samples: Sample[]) {
 export function decodeSamples(buffer: ArrayBuffer) {
   const samples: Sample[] = [];
   for (let i = 0; i < buffer.byteLength; i += 16) {
-    samples.push(parseSample(new DataView(buffer, i, 16)));
+    samples.push(parseSample(new DataView(buffer, i, 16), false));
   }
   return samples;
 }
