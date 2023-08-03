@@ -5,6 +5,7 @@ import { Phase, getSetMetrics } from "../../services/workout/util";
 import { Line, Bar } from 'solid-chartjs'
 import { Chart, Tooltip, Legend, Colors } from 'chart.js'
 import { userHue } from "../../services/user/colors";
+import { WORKOUT_MODE_CONFIGS } from "../../services/workout/modes";
 
 const chartOptions = {
   responsive: true,
@@ -36,15 +37,28 @@ export default function AnalyzeSet() {
 
   return (
     <div class="flex flex-col p-4 h-full">
-      <div class="text-lg font-bold mb-4">{set()?.exercise_id} {(new Date(set()?.time)).toLocaleString()}</div>
-      <div class="flex justify-between">
-        <div class="mb-4"><span class="text-xs block text-gray-300">Best Effort:</span> {metrics().repMaxes.best} x {toLbs(metrics().repMaxes[metrics().repMaxes.best])}lbs</div>
-        <div class="mb-4"><span class="text-xs block text-gray-300">E1RM:</span> {toLbs(metrics().repMaxes.e1rm)}lbs</div>
-        <div class="mb-4"><span class="text-xs block text-gray-300">Heaviest Rep:</span> {toLbs(metrics().concentric.maxMinForce)}lbs</div>
-        <div class="mb-4"><span class="text-xs block text-gray-300">Reps:</span> {metrics().concentric.samples.length}</div>
-        <div class="mb-4"><span class="text-xs block text-gray-300">Time:</span> {toSeconds(samples()?.[samples()?.length - 1].time - samples()?.[0].time)}s</div>
+      <div class="mb-4">
+        <div class="text-xl font-medium">{set()?.exercise_id}</div>
+        <span class="text-gray-200">{(new Date(set()?.time)).toDateString()} <span class="text-gray-400">{(new Date(set()?.time)).toLocaleTimeString()}</span></span>
       </div>
-      <div class="flex-grow bg-gray-800 p-4 rounded text-xs">
+      <div class="flex justify-between mb-4">
+        <Metric name="Mode">
+          {WORKOUT_MODE_CONFIGS[set()?.mode]?.name}
+        </Metric>
+        <Metric name="Best Effort">
+          {metrics().repMaxes.best} <span class="text-gray-300">x</span> {toLbs(metrics().repMaxes[metrics().repMaxes.best])}<span class="text-gray-300">lbs</span>
+        </Metric>
+        <Metric name="e1RM">
+          {toLbs(metrics().repMaxes.e1rm)}<span class="text-gray-300">lbs</span>
+        </Metric>
+        <Metric name="Total Reps">
+          {metrics().concentric.samples.length}
+        </Metric>
+        <Metric name="Time">
+          {toSeconds(samples()?.[samples()?.length - 1].time - samples()?.[0].time)}<span class="text-gray-300">s</span>
+        </Metric>
+      </div>
+      <div class="flex-grow bg-gray-800 p-4 rounded mb-4">
         <Tabs tabs={["ROM", "Weight", "Velocity", "Power"]} selected={currentTab()} onChange={setCurrentTab} />
         <Switch>
           <Match when={currentTab() === "ROM"}>
@@ -76,26 +90,83 @@ export default function AnalyzeSet() {
             }} 
             options={chartOptions} 
             width={500} 
-            height={250} />
+            height={400} />
+            <div class="grid grid-cols-3 mt-4">
+              <Metric name="Max ROM">
+                {toIn(metrics().rom.maxDistance)}<span class="text-gray-300">in</span>
+              </Metric>
+              <Metric name="Min ROM">
+                {toIn(metrics().rom.minDistance)}<span class="text-gray-300">in</span>
+              </Metric>
+              <Metric name="Avg ROM">
+                {toIn(metrics().rom.meanDistance)}<span class="text-gray-300">in</span>
+              </Metric>
+            </div>
           </Match>
           <Match when={currentTab() === "Weight"}>
-            <Bar data={getDatasets(metrics(), sample => sample.force.min * 2.2)} options={chartOptions} width={500} height={250} />
+            <Bar data={getDatasets(metrics(), sample => sample.force.min * 2.2)} options={chartOptions} width={500} height={400} />
+            <div class="grid grid-cols-4 mt-4">
+              <Metric name="Max Rep Weight">
+                {toLbs(metrics().concentric.maxForce)}<span class="text-gray-300">lbs</span>
+              </Metric>
+              <Metric name="Min Rep Weight">
+                {toLbs(metrics().concentric.minForce)}<span class="text-gray-300">lbs</span>
+              </Metric>
+              <Metric name="Avg Rep Weight">
+                {toLbs(metrics().concentric.meanForce)}<span class="text-gray-300">lbs</span>
+              </Metric>
+              <Metric name="Peak Weight">
+                {toLbs(metrics().concentric.maxForce)}<span class="text-gray-300">lbs</span>
+              </Metric>
+            </div>
           </Match>
           <Match when={currentTab() === "Velocity"}>
-            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean)} options={chartOptions} width={500} height={250} />
+            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean)} options={chartOptions} width={500} height={400} />
+            <div class="grid grid-cols-4 mt-4">
+              <Metric name="Avg Velocity">
+                {toMeters(metrics().concentric.meanVelocity)}<span class="text-gray-300">m/s</span>
+              </Metric>
+              <Metric name="Peak Velocity">
+                {toMeters(metrics().concentric.maxVelocity)}<span class="text-gray-300">m/s</span>
+              </Metric>
+              <Metric name="Velocity Loss">
+                {toMeters(metrics().concentric.velocityLoss)}<span class="text-gray-300">m/s</span>
+              </Metric>
+            </div>
           </Match>
           <Match when={currentTab() === "Power"}>
-            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean * sample.force.mean)} options={chartOptions} width={500} height={250} />
+            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean * sample.force.mean)} options={chartOptions} width={500} height={400} />
+            <div class="grid grid-cols-4 mt-4">
+              <Metric name="Avg Power">
+                {toMeters(metrics().concentric.meanPower)}<span class="text-gray-300">m/s</span>
+              </Metric>
+              <Metric name="Peak Power">
+                {toMeters(metrics().concentric.maxPower)}<span class="text-gray-300">m/s</span>
+              </Metric>
+            </div>
           </Match>
         </Switch>
-        <pre>{JSON.stringify({ 
+      </div>
+
+      <details>
+        <summary class="mb-4">Raw Metrics</summary>
+        <pre class="text-xs">{JSON.stringify({ 
           ...metrics(), 
           concentric: { ...metrics().concentric, samples: undefined }, 
           eccentric: { ...metrics().eccentric, samples: undefined }
         }, null, 2)}</pre>
-      </div>
+      </details>
     </div>
   );
+}
+
+function Metric(props) {
+  return (
+    <div>
+      <span class="text-xs block text-gray-400">{props.name}</span>
+      <span>{props.children}</span>
+    </div>
+  )
 }
 
 function getDatasets(metrics: ReturnType<typeof getSetMetrics>, fn: (sample: Phase) => number) {
@@ -117,10 +188,10 @@ function getDatasets(metrics: ReturnType<typeof getSetMetrics>, fn: (sample: Pha
 }
 
 function Tabs(props) {
-  return <ul class="flex flex-wrap text-sm font-medium text-center text-gray-400">
+  return <ul class="flex text-sm font-medium text-center text-gray-400 content-stretch mb-4">
     <For each={props.tabs}>{(tab: string) => (
-      <li class="mr-2">
-          <a onClick={() => props.onChange(tab)} class={`cursor-pointer inline-block px-4 py-3 rounded border ${props.selected === tab ? "text-white bg-primary-900 active border-primary-500" : "bg-gray-700 border-gray-700 hover:bg-gray-800 hover:text-white"}`}>{tab}</a>
+      <li class="flex flex-1 mx-1">
+          <a onClick={() => props.onChange(tab)} class={`cursor-pointer flex-1 gap-1 px-4 py-3 rounded border ${props.selected === tab ? "text-white bg-primary-900 active border-primary-500" : "bg-gray-700 border-gray-700 hover:bg-gray-800 hover:text-white"}`}>{tab}</a>
       </li>
     )}</For>
   </ul>
@@ -132,4 +203,16 @@ function toLbs(kg) {
 
 function toSeconds(ms) {
   return (ms / 1000).toFixed(1);
+}
+
+function toIn(cm) {
+  return (cm / 2.54).toFixed(1);
+}
+
+function toFeet(mm) {
+  return (mm / 304.8).toFixed(1);
+}
+
+function toMeters(mm) {
+  return (mm / 1000).toFixed(2);
 }
