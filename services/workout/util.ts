@@ -214,10 +214,10 @@ export function getSetMetrics(samples: Sample[], range: Range) {
       maxMinForce: Math.max(...concentric.map(p => p.force.min)),
       maxVelocity: Math.max(...concentric.map(p => p.velocity.max)),
       meanVelocity: concentric.reduce((a, b) => a + b.velocity.mean, 0) / concentric.length,
-      maxPower: Math.max(...concentric.map(p => p.velocity.max * p.force.max)),
-      meanPower: concentric.reduce((a, b) => a + b.velocity.mean * b.force.mean, 0) / concentric.length,
+      maxPower: Math.max(...concentric.map(p => p.velocity.max / 1000 * p.force.max * 9.81)),
+      meanPower: concentric.reduce((a, b) => a + b.velocity.mean / 1000 * b.force.mean * 9.81, 0) / concentric.length,
       velocityLoss: Math.max(...concentric.map(p => p.velocity.mean)) - concentric[concentric.length - 1]?.velocity.mean,
-      work: concentric.reduce((a, b) => a + b.velocity.mean * b.force.mean, 0),
+      work: concentric.reduce((a, b) => a + b.velocity.mean / 1000 * b.force.mean * 9.81 * (b.samples[b.samples.length-1].time - b.samples[0].time) / 1000, 0),
       repsMaxes: getRepMaxes(concentric, concentric),
       samples: concentric
     },

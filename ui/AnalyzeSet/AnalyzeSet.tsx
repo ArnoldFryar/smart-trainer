@@ -54,7 +54,7 @@ export default function AnalyzeSet() {
         <Metric name="Total Reps">
           {metrics().concentric.samples.length}
         </Metric>
-        <Metric name="Time">
+        <Metric name="Duration">
           {toSeconds(samples()?.[samples()?.length - 1].time - samples()?.[0].time)}<span class="text-gray-300">s</span>
         </Metric>
       </div>
@@ -107,12 +107,12 @@ export default function AnalyzeSet() {
             <Bar data={getDatasets(metrics(), sample => sample.force.min * 2.2)} options={chartOptions} width={500} height={400} />
             <div class="grid grid-cols-4 mt-4">
               <Metric name="Max Rep Weight">
-                {toLbs(metrics().concentric.maxForce)}<span class="text-gray-300">lbs</span>
+                {toLbs(metrics().concentric.maxMinForce)}<span class="text-gray-300">lbs</span>
               </Metric>
               <Metric name="Min Rep Weight">
                 {toLbs(metrics().concentric.minForce)}<span class="text-gray-300">lbs</span>
               </Metric>
-              <Metric name="Avg Rep Weight">
+              <Metric name="Avg Weight">
                 {toLbs(metrics().concentric.meanForce)}<span class="text-gray-300">lbs</span>
               </Metric>
               <Metric name="Peak Weight">
@@ -135,13 +135,16 @@ export default function AnalyzeSet() {
             </div>
           </Match>
           <Match when={currentTab() === "Power"}>
-            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean * sample.force.mean)} options={chartOptions} width={500} height={400} />
+            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean / 1000 * sample.force.mean * 9.81)} options={chartOptions} width={500} height={400} />
             <div class="grid grid-cols-4 mt-4">
               <Metric name="Avg Power">
-                {toMeters(metrics().concentric.meanPower)}<span class="text-gray-300">m/s</span>
+                {metrics().concentric.meanPower?.toFixed(1)}<span class="text-gray-300">W</span>
               </Metric>
               <Metric name="Peak Power">
-                {toMeters(metrics().concentric.maxPower)}<span class="text-gray-300">m/s</span>
+                {metrics().concentric.maxPower?.toFixed(1)}<span class="text-gray-300">W</span>
+              </Metric>
+              <Metric name="Total Work">
+                {toKJ(metrics().concentric.work)}<span class="text-gray-300">kJ</span>
               </Metric>
             </div>
           </Match>
@@ -209,10 +212,10 @@ function toIn(cm) {
   return (cm / 2.54).toFixed(1);
 }
 
-function toFeet(mm) {
-  return (mm / 304.8).toFixed(1);
-}
-
 function toMeters(mm) {
   return (mm / 1000).toFixed(2);
+}
+
+function toKJ(j) {
+  return (j / 1000).toFixed(1);
 }
