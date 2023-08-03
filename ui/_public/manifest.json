@@ -1,4 +1,6 @@
 {
+  "short_name": "VFit",
+  "name": "VFit: Smart Fitness",
   "theme_color": "#141925",
   "background_color": "#141925",
   "display": "standalone",
