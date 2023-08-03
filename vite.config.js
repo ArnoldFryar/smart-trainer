@@ -4,6 +4,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
   root: 'ui',
+  publicDir: "_public",
   plugins: [
     basicSsl(),
     solidPlugin({ hot: false })
