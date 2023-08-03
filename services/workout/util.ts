@@ -81,7 +81,7 @@ export function splitSamplesByPhase(samples: Sample[], { top, bottom }: Range): 
         const prevRep = phases[phases.length - 2]
         if (prevRep?.phase === "bottom") {
           prevRep.samples.push(...currentPhase.samples);
-          delete phases[phases.length - 1];
+          phases.length = phases.length - 1;
           currentPhase = prevRep;
         } else {
           currentPhase.phase = "bottom";
@@ -113,7 +113,7 @@ export function splitSamplesByPhase(samples: Sample[], { top, bottom }: Range): 
         const prevRep = phases[phases.length - 2]
         if (prevRep?.phase === "top") {
           prevRep.samples.push(...currentPhase.samples);
-          delete phases[phases.length - 1];
+          phases.length = phases.length - 1;
           currentPhase = prevRep;
         } else {
           currentPhase.phase = "top";
