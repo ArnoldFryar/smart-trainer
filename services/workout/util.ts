@@ -207,8 +207,6 @@ export function getSetMetrics(samples: Sample[], range: Range) {
   const bottom = phases.filter(p => p.phase === "bottom");
   const working = concentric.concat(eccentric);
 
-  console.log(phases);
-
   return {
     concentric: {
       maxForce: Math.max(...concentric.map(p => p.force.max)),
