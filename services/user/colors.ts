@@ -1,4 +1,7 @@
+export let userHue = 334;
+
 export const setUserHue = async (hue: number) => {
+  userHue = hue;
   setCssVariables(hue);
   if (Trainer.connected()) {
     const trainerHue = (hue + 10) % 360 / 360;
@@ -8,6 +11,7 @@ export const setUserHue = async (hue: number) => {
       hslToRgbInt(trainerHue, 0.9, 0.4)
     ]);
   }
+  localStorage.setItem("user-hue", hue.toString());
 };
 
 (window as any).setUserHue = setUserHue;
