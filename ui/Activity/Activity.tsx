@@ -62,7 +62,7 @@ export default function Activity() {
             </div>
             <For each={sets}>{(set) => (
               <A href={`/set/${set._id}`} class="block m-2 p-4 bg-gray-800 rounded relative">
-                <span class="text-sm absolute right-4">{set.stats.reps} <span class="text-gray-300">x</span> {toLbs(set.stats.maxMinForce)}<span class="text-gray-300">lbs</span></span>
+                <span class="text-sm absolute right-4">{set.bestEffort?.reps} <span class="text-gray-300">x</span> {toLbs(set.bestEffort?.weight)}<span class="text-gray-300">lbs</span></span>
                 <div class="font-medium">{set.exercise_id}</div>
               </A>
             )}</For>

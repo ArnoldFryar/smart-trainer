@@ -343,28 +343,32 @@ export const LIMIT_HANDLERS: LimitHandlers = {
       }, aborted)
     };
   },
-  [WORKOUT_LIMIT.SPOTTER]: ({ hardReps = 3 }) => {
+  [WORKOUT_LIMIT.SPOTTER]: ({ hardReps: forcedReps = 3 }) => {
     return (repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
         const concentricReps = () => phases().filter(p => p.phase === "concentric");
         const prevRep = (i: number) => concentricReps()[Math.floor(repCount() - i)];
         const maxMinForce = () => Math.max(...concentricReps().map(rep => rep.force.min));
-        let currentHardReps = 0;
+        let currentForcedReps = 0;
         createEffect(() => {
           if (repCount() >= 3 && repCount() % 1 === 0) {
             untrack(() => {
-              if (prevRep(1).force.min < maxMinForce()) {
-                if (++currentHardReps === hardReps) {
-                  console.log("done");
-                  beepBeepBeep();
-                  resolve();
+              try {
+                if (prevRep(1).force.min < maxMinForce()) {
+                  if (++currentForcedReps === forcedReps) {
+                    console.log("done");
+                    beepBeepBeep();
+                    resolve();
+                  } else {
+                    console.log(`${forcedReps - currentForcedReps} more?`);
+                    beep();
+                  }
                 } else {
-                  console.log(`${hardReps - currentHardReps} more?`);
-                  beep();
+                  console.log("keep going", repCount())
+                  currentForcedReps = 0;
                 }
-              } else {
-                console.log("keep going", repCount())
-                currentHardReps = 0;
+              } catch (e) {
+                debugger;
               }
             });
           }

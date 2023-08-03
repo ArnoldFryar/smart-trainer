@@ -4,12 +4,12 @@ import { SetConfig } from '../workout';
 import { Sample, decodeSamples } from '../device/cables';
 PouchDB.plugin(PouchFind);
 
-interface PouchDBBaseDocument {
+export interface PouchDBBaseDocument {
   _id: string;
   _rev?: string;
 }
 
-interface PouchDBAttachment<T = string> {
+export interface PouchDBAttachment<T = string> {
   content_type: T;
   data?: string | Blob,
   digest?: string,
@@ -22,7 +22,7 @@ interface Workout extends PouchDBBaseDocument {
   time: number;
 }
 
-interface WorkoutSet extends PouchDBBaseDocument {
+export interface WorkoutSet extends PouchDBBaseDocument {
   type: "WORKOUT_SET",
   user_id: string;
   workout_id: string;
@@ -30,9 +30,9 @@ interface WorkoutSet extends PouchDBBaseDocument {
   time: number;
   mode: SetConfig["mode"];
   modeConfig: SetConfig["modeConfig"];
-  stats: {
+  bestEffort: {
     reps: number;
-    maxMinForce: number;
+    weight: number;
     e1rm: number;
   };
   range: {
@@ -69,7 +69,7 @@ interface PersonalBest extends PouchDBBaseDocument {
 type Schema = Workout | WorkoutSet | User | UserSetting | PersonalBest;
 type PartialSchema<T extends Schema> = Omit<T, "_id" | "type"> & { _id?: string };
 
-const db = new PouchDB<Schema>("smartfitness", { auto_compaction: true });
+export const db = new PouchDB<Schema>("smartfitness", { auto_compaction: true });
 const indexFields = [
   ["time", "type", "user_id"],
   ["type", "user_id", "time"],
