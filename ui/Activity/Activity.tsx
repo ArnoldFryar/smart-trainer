@@ -1,10 +1,9 @@
 import { For, createResource } from 'solid-js';
 import { Button } from '../_common/Elements/Elements.js';
 import { getSets } from '../../services/db/settings.js';
-import { WORKOUT_MODE_CONFIGS } from '../../services/workout/modes.js';
 import { A, useNavigate } from '@solidjs/router';
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function Activity() {
   const navigate = useNavigate();
