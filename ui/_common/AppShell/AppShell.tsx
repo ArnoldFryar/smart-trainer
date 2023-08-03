@@ -28,7 +28,7 @@ export function AppShell(props) {
 }
 function NavItem(props) {
   return (
-    <A href={props.href} class="p-4 font-medium" activeClass="text-primary-500" inactiveClass="text-gray-500 hover:text-gray-400 cursor-pointer">
+    <A href={props.href} class="text-sm p-4 font-medium" activeClass="text-primary-500" inactiveClass="text-gray-500 hover:text-gray-400 cursor-pointer">
       {props.children}
     </A>
   )
