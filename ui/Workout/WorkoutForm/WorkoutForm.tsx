@@ -71,7 +71,7 @@ export function WorkoutForm(props: WorkoutForm.Props) {
         <FieldSet label="Forced Reps">
           <Slider name="forcedReps" value={props.config.forcedReps ?? 3} max={10} min={1}/>
         </FieldSet>
-        <FieldSet label="Assistance">
+        <FieldSet label="Spotter Assistance">
           <Slider name="assistance" value={props.config.assistance ?? 3} max={10} min={0}/>
         </FieldSet>
       </Show>

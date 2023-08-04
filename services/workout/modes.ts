@@ -55,14 +55,13 @@ type LimitFunction = (repCount: () => number, phases: () => Phase[], abort: Acce
 
 export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ADAPTIVE]: {
-    name: "Assess",
-    description: "Strength Test",
+    name: "Progression",
+    description: "Adaptive",
     getActivationConfig({ e1rm, forcedReps, assistance, mvt }) {
       const multiplier = assistance / 10;
       const rampUp = Math.pow(e1rm, 1.1) / 2.5;
       const minVelocity = 20 + (1000 * 2 * (mvt ?? 0.25) * multiplier);
       const maxVelocity = 400 + Math.floor(minVelocity / 2);
-      console.log({ rampUp, minVelocity, maxVelocity });
       return {
         reps: getReps(MAX_REPS),
         forces: getForces(MAX_WEIGHT, {
@@ -111,7 +110,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     }
   },
   [WORKOUT_MODE.TUT]: {
-    name: "TUT",
+    name: "Overload",
     description: "Time Under Tension",
     getActivationConfig({ e1rm, assistance, reps, forcedReps }) {
       const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, 0, reps - forcedReps);
