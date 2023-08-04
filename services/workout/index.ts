@@ -88,7 +88,8 @@ export function createWorkoutIterator({ sets: numSets, mode, exercises: exercise
   const sets = [];
   const save = (set: SetConfig, samples: Sample[], range: { top: number, bottom: number }, interrupted: boolean) => {
     const metrics = getSetMetrics(samples, range);
-    const metricKey = set.mode === "ECCENTRIC" ? "eccentric" : "concentric";
+    const baseObject = set.mode === "ECCENTRIC" ? metrics.eccentric : metrics;
+    const repMaxes = baseObject.repMaxes;
 
     saveSet({
       user_id: set.userId,
@@ -97,10 +98,10 @@ export function createWorkoutIterator({ sets: numSets, mode, exercises: exercise
       time: Date.now(),
       mode: set.mode,
       modeConfig: set.modeConfig,
-      stats: {
-        maxMinForce: metrics[metricKey].maxMinForce,
-        reps: metrics[metricKey].samples.length,
-        e1rm: metrics.e1rm
+      bestEffort: {
+        reps: repMaxes.best,
+        weight: repMaxes[repMaxes.best],
+        e1rm: repMaxes.e1rm
       },
       range,
       _attachments: {
@@ -110,8 +111,6 @@ export function createWorkoutIterator({ sets: numSets, mode, exercises: exercise
         }
       }
     }).then(console.log).catch(console.error);
-    // let data: WorkoutSet = { set, samples, metrics, interrupted };
-    // localStorage.setItem("workoutSets", JSON.stringify(JSON.parse(localStorage.getItem("workoutSets") ?? "[]").concat(data).slice(-1000)));
   }
 
   const addSet = (exerciseId: string, setIndex: number) => {
