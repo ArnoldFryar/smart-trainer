@@ -338,7 +338,7 @@ export const LIMIT_HANDLERS: LimitHandlers = {
       }, aborted)
     };
   },
-  [WORKOUT_LIMIT.SPOTTER]: ({ hardReps: forcedReps = 3 }) => {
+  [WORKOUT_LIMIT.SPOTTER]: ({ forcedReps }) => {
     return (repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
         const concentricReps = () => phases().filter(p => p.phase === "concentric");
