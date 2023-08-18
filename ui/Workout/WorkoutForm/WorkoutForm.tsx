@@ -111,10 +111,10 @@ function Sets(props) {
   const copyLast = (e) => {
     e.preventDefault();
     const formData = getNestedFormData((e.target as HTMLButtonElement).form);
-    const currentSets = formData[props.name];
+    const currentSets = formData[props.name] || [];
     setSets([
       ...currentSets,
-      currentSets[currentSets.length - 1]
+      currentSets[currentSets.length - 1] || DEFAULT_SET
     ]);
     setOpenIndex(currentSets.length);
   }
