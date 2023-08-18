@@ -11,6 +11,7 @@ import {
 import { createLocalSignal } from "../../../services/util/signals.js";
 import { DEFAULT_USERS, WorkoutConfig } from "../../../services/workout/index.js";
 import { ACTIVE_WORKOUT_MODES, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
+import { getNestedFormData } from "../../../services/util/form.js";
 export namespace WorkoutForm {
   export interface Props {
     config: WorkoutConfig;
@@ -22,77 +23,15 @@ export namespace WorkoutForm {
 const EXERCISE_KEYS = Object.keys(EXERCISES);
 
 export function WorkoutForm(props: WorkoutForm.Props) {
-  const [mode, setMode] = createSignal(props.config.mode || "assess");
   const activate = async (e) => {
     e.preventDefault();
-    const data = new FormData(e.target);
-    props.onSubmit({
-      reps: parseInt(data.get("reps") as string) ?? undefined,
-      time: parseInt(data.get("time") as string) ?? undefined,
-      forcedReps: parseInt(data.get("forcedReps") as string) ?? undefined,
-      assistance: parseInt(data.get("assistance") as string) ?? undefined,
-      rir: parseInt(data.get("rir") as string) ?? undefined,
-      sets: parseInt(data.get("sets") as string),
-      mode: data.get("mode"),
-      superset: data.get("superset") === "true",
-      users: data.getAll("users"),
-      exercises: data.getAll("exercise"),
-    });
-  };
-  const selectMode = (e) => {
-    setMode(e.target.value);
+    const data = getNestedFormData(e.target);
+    props.onSubmit(data);
   };
   return (
     <form onSubmit={activate} class="p-4">
       <UserSelect value={props.config.users}/>
-      <RadioGroup label="Workout Mode" checkedValue={mode()} onChange={selectMode}>
-        <For each={ACTIVE_WORKOUT_MODES}>
-          {(mode) => (
-            <Radio name="mode" value={mode}>
-              <span class="text-sm">{WORKOUT_MODE_CONFIGS[mode].name}</span>
-              <span class="text-xs opacity-80 block">
-                {WORKOUT_MODE_CONFIGS[mode].description}
-              </span>
-            </Radio>
-          )}
-        </For>
-      </RadioGroup>
-      <Show when={mode() !== WORKOUT_MODE.ADAPTIVE && mode() !== WORKOUT_MODE.PUMP}>
-        <FieldSet label="Reps">
-          <Slider name="reps" value={props.config.reps ?? 10} max={20} min={1}/>
-        </FieldSet>
-      </Show>
-      <Show when={mode() === WORKOUT_MODE.PUMP}>
-        <FieldSet label="Time">
-          <Slider name="time" value={props.config.time ?? 30} max={120} min={10} step={10}/>
-        </FieldSet>
-      </Show>
-      <Show when={mode() === WORKOUT_MODE.ADAPTIVE || mode() === WORKOUT_MODE.TUT}>
-        <FieldSet label="Forced Reps">
-          <Slider name="forcedReps" value={props.config.forcedReps ?? 3} max={10} min={1}/>
-        </FieldSet>
-        <FieldSet label="Spotter Assistance">
-          <Slider name="assistance" value={props.config.assistance ?? 3} max={10} min={0}/>
-        </FieldSet>
-      </Show>
-      <Show when={mode() === WORKOUT_MODE.STATIC || mode() === WORKOUT_MODE.ECCENTRIC}>
-        <FieldSet label="Reps in Reserve">
-          <Slider name="rir" value={props.config.rir ?? 3} max={10} min={0}/>
-        </FieldSet>
-      </Show>
-      <FieldSet label="Sets">
-        <Slider name="sets" value={props.config.sets ?? 3} max={10} min={1}/>
-      </FieldSet>
-      <ExerciseSelect defaultValue={props.config.exercises} mode={mode()} />
-      <RadioGroup label="Superset" checkedValue={props.config.superset}>
-        {/* By Equipment, All, None */}
-        <Radio name="superset" value="true">
-          <span>Yes</span>
-        </Radio>
-        <Radio name="superset" value="false">
-          <span>No</span>
-        </Radio>
-      </RadioGroup>
+      <Sets value={props.config.sets} name="sets"/>
       <Button type="submit" primary>{props.connected ? "Workout!" : "Connect"}</Button>
     </form>
   );
@@ -107,7 +46,7 @@ function UserSelect(props: { value: string[] }) {
         <For each={usersEntries()}>
           {([key, user]) => (
             <label class="group flex flex-col mr-2 cursor-pointer">
-              <input type="checkbox" checked={props.value?.includes?.(key)} name="users" value={key} class="hidden peer"/>
+              <input type="checkbox" checked={props.value?.includes?.(key)} name="users[]" value={key} class="hidden peer"/>
               <div class={`
                 flex
                 justify-center
@@ -158,70 +97,165 @@ function UserSelect(props: { value: string[] }) {
   );
 }
 
-// add a select for each exercise with an add button
-function ExerciseSelect(props) {
-  const [exercises, setExercises] = createSignal(props.defaultValue || []);
+const DEFAULT_SET = {
+  exercise: "BACK_SQUAT",
+  mode: WORKOUT_MODE.ADAPTIVE,
+  forcedReps: 3,
+  spotterVelocity: 0.25
+};
+
+function Sets(props) {
+  let button!: HTMLButtonElement;
+  const [sets, setSets] = createSignal(props.value || [DEFAULT_SET]);
+  const [openIndex, setOpenIndex] = createSignal(sets().length === 1 ? 0 : -1);
+  const copyLast = (e) => {
+    e.preventDefault();
+    const formData = getNestedFormData((e.target as HTMLButtonElement).form);
+    const currentSets = formData[props.name];
+    setSets([
+      ...currentSets,
+      currentSets[currentSets.length - 1]
+    ]);
+    setOpenIndex(currentSets.length);
+  }
+  const copyAll = (e) => {
+    e.preventDefault();
+    const formData = getNestedFormData((e.target as HTMLButtonElement).form);
+    const currentSets = formData[props.name];
+    setSets([
+      ...currentSets,
+      ...currentSets
+    ]);
+    setOpenIndex(-1);
+  }
+  const updateSets = (e) => {
+    const formData = getNestedFormData((e.target as HTMLInputElement).form);
+    const currentSets = formData[props.name];
+    setSets(currentSets);
+  }
+  const removeSet = (i) => {
+    if (canRemove()) {
+      const formData = getNestedFormData((button as HTMLButtonElement).form);
+      const currentSets = formData[props.name];
+      setSets([
+        ...currentSets.slice(0, i),
+        ...currentSets.slice(i + 1)
+      ]);
+      if (openIndex() === i) {
+        setOpenIndex(-1);
+      } else if (openIndex() > i) {
+        setOpenIndex(openIndex() - 1)
+      }
+    }
+  }
+  const canRemove = () => sets().length > 1;
 
   return (
-    <FieldSet label="Exercises">
-      <div class="flex flex-col">
-        <For each={exercises()}>
-          {(exercise, i) => (
-            <div class="flex flex-col my-2">
-              <div class="flex">
-                <Select name="exercise" class="mr-2">
-                  <For each={EXERCISE_KEYS}>
-                    {(key) => (
-                      <option selected={key === exercise}>
-                        {key}
-                        <Show when={props.mode !== "assess"}>
-                          {/* missing_e1rm ? "w/ assessment" : "@100lbs" */}
-                        </Show>
-                      </option>
-                    )}
-                  </For>
-                </Select>
-                <Button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setExercises([
-                      ...exercises().slice(0, i()),
-                      ...exercises().slice(i() + 1),
-                    ]);
-                  }}
-                >
-                  ✕
-                </Button>
-              </div>
-            </div>
-          )}
-        </For>
-      </div>
-      <div class="flex">
-        <Button
-          class="mr-2"
-          onClick={(e) => {
-            e.preventDefault();
-            setExercises(
-              exercises().map(() => {
-                return EXERCISE_KEYS[
-                  Math.floor(Math.random() * EXERCISE_KEYS.length)
-                ];
-              })
-            );
-          }}
-        >
-          ⟳
-        </Button>
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            setExercises([...exercises(), {}]);
-          }}
-        >
-          +
-        </Button>
-      </div>
+    <FieldSet label={`Sets`}>
+      <For each={sets()}>
+        {(set, i) => (
+          <Set 
+            name={`${props.name}.${i()}`} 
+            value={set} 
+            open={i() === openIndex()} 
+            onOpen={() => setOpenIndex(i())} 
+            onChange={updateSets} 
+            canRemove={canRemove()}
+            onRemove={() => removeSet(i())}
+            />
+        )}
+      </For>
+      <Button ref={button} onClick={copyLast}>Add Set</Button>
+      <Button onClick={copyAll}>Copy All</Button>
     </FieldSet>
   );
+}
+
+function Set(props) {
+  const [mode, setMode] = createSignal(props.value.mode || WORKOUT_MODE.ADAPTIVE);
+  const selectMode = (e) => setMode(e.target.value);
+  const onOpen = (e) => {
+    if (e.currentTarget.open) {
+      props.onOpen();
+    }
+  }
+  const onRemove = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    props.onRemove?.();
+  }
+
+  return (
+    <details open={props.open} onToggle={onOpen} class="mb-2" onChange={props.onChange}>
+      <summary class="p-2 text-gray-400 bg-gray-800 rounded">
+        <span class="text-white inline-block ml-1">
+          {props.value.exercise}
+          <span class="block text-xs text-gray-400">
+            {WORKOUT_MODE_CONFIGS[mode()].name}
+            <Show when={props.value.reps}>
+              &nbsp;&bull; {props.value.reps}reps
+            </Show>
+            <Show when={props.value.forcedReps}>
+            &nbsp;&bull; {props.value.forcedReps}fr
+            </Show>
+            <Show when={props.value.rir}>
+            &nbsp;&bull; {props.value.rir}rir
+            </Show>
+            <Show when={props.value.spotterVelocity}>
+            &nbsp;&bull; {props.value.spotterVelocity}m/s
+            </Show>
+          </span>
+        </span>
+        <Show when={props.canRemove}><Button class="float-right" onClick={onRemove}>
+          ✕
+        </Button></Show>
+        
+      </summary>
+      <div class="border border-gray-800 px-2 -mt-2">
+        <FieldSet label="Exercise">
+          <Select name={`${props.name}.exercise`} class="mr-2">
+            <For each={EXERCISE_KEYS}>
+              {(key) => (
+                <option selected={key === props.value.exercise}>
+                  {key}
+                </option>
+              )}
+            </For>
+          </Select>
+        </FieldSet>
+        <RadioGroup label="Workout Mode" checkedValue={mode()} onChange={selectMode}>
+          <For each={ACTIVE_WORKOUT_MODES}>
+            {(mode) => (
+              <Radio name={`${props.name}.mode`} value={mode}>
+                <span class="text-sm">{WORKOUT_MODE_CONFIGS[mode].name}</span>
+              </Radio>
+            )}
+          </For>
+        </RadioGroup>
+        <Show when={mode() !== WORKOUT_MODE.ADAPTIVE && mode() !== WORKOUT_MODE.PUMP}>
+          <FieldSet label="Reps">
+            <Slider name={`${props.name}.reps`} value={props.value.reps ?? 10} max={20} min={1}/>
+          </FieldSet>
+        </Show>
+        <Show when={mode() === WORKOUT_MODE.PUMP}>
+          <FieldSet label="Time">
+            <Slider name={`${props.name}.time`} value={props.value.time ?? 30} max={120} min={10} step={10}/>
+          </FieldSet>
+        </Show>
+        <Show when={mode() === WORKOUT_MODE.ADAPTIVE || mode() === WORKOUT_MODE.TUT}>
+          <FieldSet label="Forced Reps">
+            <Slider name={`${props.name}.forcedReps`} value={props.value.forcedReps ?? 3} max={10} min={1}/>
+          </FieldSet>
+          <FieldSet label="Spotter Velocity (m/s)">
+            <Slider name={`${props.name}.spotterVelocity`} value={props.value.spotterVelocity ?? 0.25} max={0.5} min={0} step={0.05}/>
+          </FieldSet>
+        </Show>
+        <Show when={mode() === WORKOUT_MODE.STATIC || mode() === WORKOUT_MODE.ECCENTRIC}>
+          <FieldSet label="Reps in Reserve">
+            <Slider name={`${props.name}.rir`} value={props.value.rir ?? 3} max={10} min={0}/>
+          </FieldSet>
+        </Show>
+      </div>
+    </details>
+  )
 }

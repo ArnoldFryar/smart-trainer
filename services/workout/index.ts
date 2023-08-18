@@ -12,9 +12,11 @@ export type SetConfig = {
   mode: keyof typeof WORKOUT_MODE;
   modeConfig: {
     e1rm?: number,
-    time?: number, 
-    reps?: number, 
-    ratio?: number 
+    reps?: number;
+    time?: number;
+    rir?: number;
+    forcedReps?: number;
+    spotterVelocity?: number;
   },
   userId: string;
   hue: number;
@@ -22,15 +24,15 @@ export type SetConfig = {
 
 export type WorkoutConfig = {
   users: string[];
-  superset: boolean;
-  exercises: Array<keyof Exercise>;
-  mode: keyof typeof WORKOUT_MODE;
-  sets: number;
-  reps?: number;
-  time?: number;
-  rir?: number;
-  forcedReps?: number;
-  assistance?: number;
+  sets: Array<{
+    exercise: keyof Exercise;
+    mode: keyof typeof WORKOUT_MODE;
+    reps?: number;
+    time?: number;
+    rir?: number;
+    forcedReps?: number;
+    spotterVelocity?: number;
+  }>;
 }
 
 export async function selectExercises() {
@@ -81,11 +83,11 @@ export const DEFAULT_USERS = {
   },
 }
 
-export function createWorkoutIterator({ sets: numSets, mode, exercises: exerciseIds, superset, users: userIds, ...modeConfig }: WorkoutConfig) {
+export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
   const users = DEFAULT_USERS;
   const workout_id = Math.random() + "";
 
-  const sets = [];
+  const setConfigs: Array<() => SetConfig> = [];
   const save = (set: SetConfig, samples: Sample[], range: { top: number, bottom: number }, interrupted: boolean) => {
     const metrics = getSetMetrics(samples, range);
     const baseObject = set.mode === "ECCENTRIC" ? metrics.eccentric : metrics;
@@ -113,37 +115,33 @@ export function createWorkoutIterator({ sets: numSets, mode, exercises: exercise
     }).then(console.log).catch(console.error);
   }
 
-  const addSet = (exerciseId: string, setIndex: number) => {
-    const exercise = EXERCISES[exerciseId];
+  console.log(users);
+
+  for (const set of sets) {
+    const { mode, exercise: exerciseId, ...modeConfig } = set;
+    const exercise = EXERCISES[set.exercise];
     for (const userId of userIds) {
       const user = users[userId];
       const e1rm = user.exercises?.[exerciseId]?.e1rm ?? user.squat * exercise.ratio;
-      sets.push(() => {
+      setConfigs.push(() => {
         return {
           exercise,
           userId,
           hue: user.hue,
           mode,
-          modeConfig: { e1rm, setIndex, mvt: exercise.mvt, ...modeConfig },
+          modeConfig: { e1rm, ...normalizeModeConfig(modeConfig) },
           rest: 10000,
         }
       });
     }
   }
 
-  if (superset) {
-    for (let setIndex = 0; setIndex < numSets; setIndex++) {
-      for (const exerciseId of exerciseIds) {
-        addSet(exerciseId, setIndex);
-      }
-    }
-  } else {
-    for (const exerciseId of exerciseIds) {
-      for (let setIndex = 0; setIndex < numSets; setIndex++) {
-        addSet(exerciseId, setIndex);
-      }
-    }
-  }
+  return [setConfigs, save] as const;
+}
 
-  return [sets, save] as const;
+function normalizeModeConfig(config) {
+  if (config.spotterVelocity) {
+    config.spotterVelocity *= 1000;
+  }
+  return config;
 }

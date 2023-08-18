@@ -1,3 +1,4 @@
+import { getNestedFormData } from '../../services/util/form.js';
 import { createLocalSignal } from '../../services/util/signals.js';
 
 const DEFAULT_CONFIG = {
@@ -61,23 +62,7 @@ export default function Manual() {
   return (
     <form class="flex flex-col" onSubmit={async (e) => {
       e.preventDefault();
-
-      const data = new FormData(e.currentTarget);
-      const config: typeof DEFAULT_CONFIG = {} as any;
-
-      for (const [key, value] of (data as any).entries()) {
-        const parts = key.split(".");
-        const last = parts.pop();
-        let obj = config;
-        for (const part of parts) {
-          if (!obj[part]) {
-            obj[part] = {};
-          }
-          obj = obj[part];
-        }
-        obj[last] = value;
-      }
-
+      const config = getNestedFormData(e.currentTarget) as typeof DEFAULT_CONFIG;
       setActivateConfig(config);
 
       if (!Trainer.connected()) {

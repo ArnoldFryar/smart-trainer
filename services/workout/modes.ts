@@ -4,6 +4,7 @@ import { reactivePromise } from '../util/signals.js';
 import { Accessor, createEffect, untrack } from "solid-js";
 import { Phase } from "./util";
 import { beep, beepBeepBeep } from "../util/sounds";
+import { SetConfig } from ".";
 
 export const WORKOUT_MODE = {
   STATIC: "STATIC",
@@ -34,7 +35,7 @@ type WorkoutModeConfigs = {
   [key in keyof typeof WORKOUT_MODE]?: {
     name: string;
     description: string;
-    getActivationConfig: (params: { e1rm: number, forcedReps: number, assistance: number, rir: number, reps: number, time: number, mvt?: number }) => {
+    getActivationConfig: (params: SetConfig["modeConfig"]) => {
       reps: ReturnType<typeof getReps>,
       forces: ReturnType<typeof getForces>,
       limit: LimitFunction;
@@ -57,17 +58,15 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ADAPTIVE]: {
     name: "Progression",
     description: "Adaptive",
-    getActivationConfig({ e1rm, forcedReps, assistance, mvt }) {
-      const multiplier = assistance / 10;
+    getActivationConfig({ e1rm, forcedReps, spotterVelocity }) {
       const rampUp = Math.pow(e1rm, 1.1) / 2.5;
-      const minVelocity = 20 + (1000 * 2 * (mvt ?? 0.25) * multiplier);
-      const maxVelocity = 400 + Math.floor(minVelocity / 2);
+      const loadVelocity = 400 + Math.floor(spotterVelocity / 2);
       return {
         reps: getReps(MAX_REPS),
         forces: getForces(MAX_WEIGHT, {
           concentric: {
-            decrease: { minMmS: minVelocity - 600, maxMmS: minVelocity - 1, ramp: rampUp * 0.75 },
-            increase: { minMmS: maxVelocity + 1, maxMmS: maxVelocity + 600, ramp: rampUp },
+            decrease: { minMmS: spotterVelocity - 600, maxMmS: spotterVelocity - 1, ramp: rampUp * 0.75 },
+            increase: { minMmS: loadVelocity + 1, maxMmS: loadVelocity + 600, ramp: rampUp },
           },
           eccentric: {
             decrease: { minMmS: -1300, maxMmS: -1200, ramp: 0 },
@@ -77,8 +76,8 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
         limit: LIMIT_HANDLERS[WORKOUT_LIMIT.SPOTTER]({ forcedReps }),
         display: {
           forcedReps,
-          lowVelocity: minVelocity,
-          highVelocity: maxVelocity,
+          lowVelocity: spotterVelocity,
+          highVelocity: loadVelocity,
         }
       }
     }
@@ -86,7 +85,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.STATIC]: {
     name: "Isotonic",
     description: "Old School",
-    getActivationConfig({ e1rm, rir, reps, mvt }) {
+    getActivationConfig({ e1rm, rir, reps }) {
       const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, rir, reps);
       return {
         reps: getReps(reps),
@@ -103,8 +102,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
         limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS_FAILURE]({ reps }),
         display: {
           weight,
-          reps,
-          lowVelocity: mvt
+          reps
         }
       }
     }
@@ -112,17 +110,16 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.TUT]: {
     name: "Overload",
     description: "Time Under Tension",
-    getActivationConfig({ e1rm, assistance, reps, forcedReps }) {
+    getActivationConfig({ e1rm, spotterVelocity, reps, forcedReps }) {
       const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, 0, reps - forcedReps);
       const rampDown = 2 * Math.pow(weight, 1/3);
-      const rampUp = rampDown * (1.5 + (1 - assistance / 10) * 3);
-      const spotVelocity = 200 + (assistance / 10) * 200;
-      const loadVelocity = spotVelocity + 100;
+      const rampUp = rampDown * 2.5;
+      const loadVelocity = spotterVelocity + 100;
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
           concentric: {
-            decrease: { minMmS: spotVelocity - 100, maxMmS: spotVelocity, ramp: rampDown },
+            decrease: { minMmS: spotterVelocity - 100, maxMmS: spotterVelocity, ramp: rampDown },
             increase: { minMmS: loadVelocity, maxMmS: loadVelocity + 100, ramp: 50 },
           },
           eccentric: {
@@ -134,7 +131,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
         display: {
           weight,
           reps,
-          lowVelocity: spotVelocity,
+          lowVelocity: spotterVelocity,
           highVelocity: loadVelocity,
         }
       }
@@ -195,25 +192,24 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ISOKINETIC]: {
     name: "Isokinetic",
     description: "Constant Velocity",
-    getActivationConfig({ e1rm, reps }) {
-      const targetVelocity = 200 /* + (1 - intensity / 10) * 200 */;
+    getActivationConfig({ e1rm, reps, spotterVelocity }) {
       return {
         reps: getReps(reps),
         forces: getForces(MAX_WEIGHT, {
           concentric: {
-            decrease: { minMmS: 0, maxMmS: targetVelocity - 1, ramp: e1rm * 0.4 },
-            increase: { minMmS: targetVelocity + 1, maxMmS: targetVelocity + 400, ramp: e1rm },
+            decrease: { minMmS: 0, maxMmS: spotterVelocity - 1, ramp: e1rm * 0.4 },
+            increase: { minMmS: spotterVelocity + 1, maxMmS: spotterVelocity + 400, ramp: e1rm },
           },
           eccentric: {
-            decrease: { minMmS: -targetVelocity - 400, maxMmS: -targetVelocity - 1, ramp: e1rm },
-            increase: { minMmS: -targetVelocity + 1, maxMmS: 0, ramp: e1rm * 0.4 },
+            decrease: { minMmS: -spotterVelocity - 400, maxMmS: -spotterVelocity - 1, ramp: e1rm },
+            increase: { minMmS: -spotterVelocity + 1, maxMmS: 0, ramp: e1rm * 0.4 },
           },
         }),
         limit: LIMIT_HANDLERS[WORKOUT_LIMIT.REPS]({ reps }),
         display: {
           reps,
-          lowVelocity: targetVelocity - 1,
-          highVelocity: targetVelocity + 1,
+          lowVelocity: spotterVelocity - 1,
+          highVelocity: spotterVelocity + 1,
         }
       }
     }
