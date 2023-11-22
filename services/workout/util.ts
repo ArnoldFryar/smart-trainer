@@ -212,6 +212,7 @@ export function getSetMetrics(samples: Sample[], range: Range) {
       maxForce: Math.max(...concentric.map(p => p.force.max)),
       meanForce: concentric.reduce((a, b) => a + b.force.mean, 0) / concentric.length,
       maxMinForce: Math.max(...concentric.map(p => p.force.min)),
+      weightedForce: estimateXRepMaxLombardi(getEstimated1RepMax(concentric), concentric.length),
       maxVelocity: Math.max(...concentric.map(p => p.velocity.max)),
       meanVelocity: concentric.reduce((a, b) => a + b.velocity.mean, 0) / concentric.length,
       maxPower: Math.max(...concentric.map(p => p.velocity.max / 1000 * p.force.max * 9.81)),
@@ -225,6 +226,7 @@ export function getSetMetrics(samples: Sample[], range: Range) {
       maxForce: Math.max(...eccentric.map(p => p.force.max)),
       meanForce: eccentric.reduce((a, b) => a + b.force.mean, 0) / eccentric.length,
       maxMinForce: Math.max(...eccentric.map(p => p.force.min)),
+      weightedForce: estimateXRepMaxLombardi(getEstimated1RepMax(eccentric), eccentric.length),
       meanVelocity: eccentric.reduce((a, b) => a + b.velocity.mean, 0) / eccentric.length,
       minMeanVelocity: Math.min(...eccentric.map(p => p.velocity.mean)),
       repMaxes: getRepMaxes(eccentric, eccentric),
@@ -248,33 +250,33 @@ export function getSetMetrics(samples: Sample[], range: Range) {
 }
 
 function getEstimated1RepMax(concentric: Phase[]) {
-  const maxMinForce = Math.max(...concentric.map(p => p.force.min));
-  const consideredReps = concentric.slice(0, concentric.findIndex(r => r.force.min === maxMinForce) + 1);
-  const weightedReps = consideredReps.reduce((count, r) => count + Math.pow(r.force.min / maxMinForce, 2), 0);
-  const estimated1rm = maxMinForce * (36 / (37 - weightedReps));
-  // const estimated1rm_alt = maxMinForce + consideredReps.reduce((force, r) => force + r.force.mean / 30, 0);
-
-  return estimated1rm;
+  const lowestForce = Math.min(...concentric.map(p => p.force.min));
+  const weightedReps = concentric.reduce((count, r) => count + estimateMaxRepsLombardi(r.force.min, lowestForce), 0);
+  return estimate1RepMaxLombardi(lowestForce, weightedReps);
 }
 
 function getRepMaxes(concentric: Phase[], eccentric: Phase[]): Record<number | "e1rm" | "best", number> {
   let start = 0;
-  let end = concentric.length - 1;
+  let end = concentric.length;
+  const weights = concentric.map((p, i) => Math.min(p.force.min, eccentric[i].force.min));
   const repMaxes = {
     e1rm: 0,
     best: 0,
   };
 
   while (start < end) {
-    const lowestForce = Math.min(...concentric.slice(start, end).map(p => p.force.min), ...eccentric.slice(start, end).map(p => p.force.min));
-    const reps = end - start + 1;
-    const e1rm = lowestForce * (36 / (37 - reps));
+    const consideredWeights = weights.slice(start, end);
+    const lowestForce = Math.min(...consideredWeights);
+    const first = consideredWeights[0];
+    const last = consideredWeights[consideredWeights.length - 1];
+    const reps = consideredWeights.length;
+    const e1rm = estimate1RepMaxBrzycki(lowestForce, reps);
     repMaxes[reps] = lowestForce;
     if (e1rm > repMaxes.e1rm) {
       repMaxes.e1rm = e1rm;
       repMaxes.best = reps;
     }
-    if (Math.min(concentric[start].force.min, eccentric[start].force.min) < Math.min(concentric[end].force.min, eccentric[end].force.min)) {
+    if (first < last) {
       start++;
     } else {
       end--;
@@ -282,4 +284,20 @@ function getRepMaxes(concentric: Phase[], eccentric: Phase[]): Record<number | "
   }
 
   return repMaxes;
+}
+
+function estimate1RepMaxLombardi(weight: number, reps: number) {
+  return weight * Math.pow(reps, 0.1);
+}
+
+function estimate1RepMaxBrzycki(weight: number, reps: number) {
+  return weight * (36 / (37 - reps));
+}
+
+function estimateMaxRepsLombardi(weight: number, max: number) {
+  return Math.pow(max / weight, 10);
+}
+
+function estimateXRepMaxLombardi(oneRepMax: number, reps: number) {
+  return oneRepMax / Math.pow(reps, 0.1);
 }
