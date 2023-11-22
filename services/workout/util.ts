@@ -251,7 +251,7 @@ export function getSetMetrics(samples: Sample[], range: Range) {
 
 function getEstimated1RepMax(concentric: Phase[]) {
   const lowestForce = Math.min(...concentric.map(p => p.force.min));
-  const weightedReps = concentric.reduce((count, r) => count + estimateMaxRepsLombardi(r.force.min, lowestForce), 0);
+  const weightedReps = concentric.reduce((count, r) => count + estimateMaxRepsLombardi(lowestForce, r.force.min), 0);
   return estimate1RepMaxLombardi(lowestForce, weightedReps);
 }
 
