@@ -52,7 +52,7 @@ export default function AnalyzeSet() {
           {toLbs(metrics().repMaxes.e1rm)}<span class="text-gray-300">lbs</span>
         </Metric>
         <Metric name="e1RM*">
-          {toLbs(metrics().e1rm)}<span class="text-gray-300">lbs</span>
+          {toLbs(metrics().repMaxes.e1rm2)}<span class="text-gray-300">lbs</span>
         </Metric>
         <Metric name="Total Reps">
           {metrics().concentric.samples.length}
