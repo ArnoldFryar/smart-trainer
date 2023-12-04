@@ -33,8 +33,8 @@ export interface WorkoutSet extends PouchDBBaseDocument {
   bestEffort: {
     reps: number;
     weight: number;
-    e1rm: number;
   };
+  e1rm: number;
   range: {
     top: number;
     bottom: number;
@@ -198,6 +198,32 @@ export async function getLatestPB(user_id: string) {
 
 export async function savePB(pb: PartialSchema<PersonalBest>) {
   return upsert("PERSONAL_BEST", pb);
+}
+
+
+const TIME_RANGE = 1000 * 60 * 60 * 12; // 12 hours
+export async function getEstimated1RepMax(user_id: string, exercise_id: string) {
+  const recentSets = (await db.find({
+    selector: {
+      type: "WORKOUT_SET",
+      user_id,
+      exercise_id
+    },
+    sort: [{ time: "desc" }],
+    limit: 10
+  })).docs as WorkoutSet[];
+
+  const time = recentSets[0]?.time;
+  const maxTime = time - TIME_RANGE;
+  let e1rm = 0;
+  for (const set of recentSets) {
+    if (set.time < maxTime) {
+      break;
+    }
+    e1rm = Math.max(e1rm, set.e1rm);
+  }
+
+  return e1rm;
 }
 
 (window as any).db = db;

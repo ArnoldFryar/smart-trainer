@@ -33,7 +33,7 @@ export async function migrateWorkoutSetsv1() {
   })).docs as any as WorkoutSetv1[];
 
   for (const set of sets) {
-    if (set.stats) {
+    if (set.stats || !(set as any as WorkoutSet).e1rm) {
       const samples = await getSetSamples(set._id);
       const metrics = getSetMetrics(samples, set.range);
       const baseObject = set.mode === "ECCENTRIC" ? metrics.eccentric : metrics;
@@ -44,8 +44,9 @@ export async function migrateWorkoutSetsv1() {
       (set as any as WorkoutSet).bestEffort = {
         reps: repMaxes.best,
         weight: repMaxes[repMaxes.best],
-        e1rm: repMaxes.e1rm
       };
+
+      (set as any as WorkoutSet).e1rm = metrics.e1rm;
 
       await db.put(set as any);
     }

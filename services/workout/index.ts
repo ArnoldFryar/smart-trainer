@@ -1,6 +1,6 @@
 import { Exercise, PUSH_EXERCISES, PULL_EXERCISES, LEG_EXERCISES, ACCESSORY_EXERCISES, EXERCISES } from "./exercises";
 import { WORKOUT_MODE } from "./modes";
-import { saveSet } from "../db/settings.js";
+import { getEstimated1RepMax, saveSet } from "../db/settings.js";
 import { getSetMetrics } from "./util.js";
 import { Sample, encodeSamples } from "../device/cables.js";
 
@@ -87,7 +87,7 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
   const users = DEFAULT_USERS;
   const workout_id = Math.random() + "";
 
-  const setConfigs: Array<() => SetConfig> = [];
+  const setConfigs: Array<() => Promise<SetConfig>> = [];
   const save = (set: SetConfig, samples: Sample[], range: { top: number, bottom: number }, interrupted: boolean) => {
     const metrics = getSetMetrics(samples, range);
     const baseObject = set.mode === "ECCENTRIC" ? metrics.eccentric : metrics;
@@ -102,9 +102,9 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
       modeConfig: set.modeConfig,
       bestEffort: {
         reps: repMaxes.best,
-        weight: repMaxes[repMaxes.best],
-        e1rm: repMaxes.e1rm
+        weight: repMaxes[repMaxes.best]
       },
+      e1rm: metrics.e1rm,
       range,
       _attachments: {
         "samples.bin": {
@@ -115,15 +115,13 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
     }).then(console.log).catch(console.error);
   }
 
-  console.log(users);
-
   for (const set of sets) {
     const { mode, exercise: exerciseId, ...modeConfig } = set;
     const exercise = EXERCISES[set.exercise];
     for (const userId of userIds) {
       const user = users[userId];
-      const e1rm = user.exercises?.[exerciseId]?.e1rm ?? user.squat * exercise.ratio;
-      setConfigs.push(() => {
+      setConfigs.push(async () => {
+        const e1rm = await getEstimated1RepMax(userId, exerciseId) || user.squat * exercise.ratio;
         return {
           exercise,
           userId,

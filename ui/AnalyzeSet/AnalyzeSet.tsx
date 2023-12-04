@@ -49,10 +49,7 @@ export default function AnalyzeSet() {
           {metrics().repMaxes.best} <span class="text-gray-300">x</span> {toLbs(metrics().repMaxes[metrics().repMaxes.best])}<span class="text-gray-300">lbs</span>
         </Metric>
         <Metric name="e1RM">
-          {toLbs(metrics().repMaxes.e1rm)}<span class="text-gray-300">lbs</span>
-        </Metric>
-        <Metric name="e1RM*">
-          {toLbs(metrics().repMaxes.e1rm2)}<span class="text-gray-300">lbs</span>
+          {toLbs(metrics().e1rm)}<span class="text-gray-300">lbs</span>
         </Metric>
         <Metric name="Total Reps">
           {metrics().concentric.samples.length}
@@ -117,9 +114,6 @@ export default function AnalyzeSet() {
               </Metric>
               <Metric name="Avg Weight">
                 {toLbs(metrics().concentric.meanForce)}<span class="text-gray-300">lbs</span>
-              </Metric>
-              <Metric name="? Weight">
-                {toLbs(metrics().concentric.weightedForce)}<span class="text-gray-300">lbs</span>
               </Metric>
               <Metric name="Peak Weight">
                 {toLbs(metrics().concentric.maxForce)}<span class="text-gray-300">lbs</span>
