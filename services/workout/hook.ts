@@ -25,11 +25,11 @@ export function createWorkoutService(
   );
   const [currentSetSamples, setCurrentSetSamples] = createSignal<Sample[]>([]);
   const currentSetActivationConfig = () => {
-    return WORKOUT_MODE_CONFIGS[currentSet().mode].getActivationConfig(currentSet().modeConfig as any);
+    return WORKOUT_MODE_CONFIGS[currentSet()?.mode]?.getActivationConfig(currentSet()?.modeConfig as any);
   };
   const calibrationReps = () => {
     // We prefer to end on a concentric rep, so we add 0.5 to the baseline (except for eccentric only mode)
-    return currentSetActivationConfig().reps.repCounts.baseline + (currentSet().mode === WORKOUT_MODE.ECCENTRIC ? 0 : 0.5);
+    return (currentSetActivationConfig()?.reps.repCounts.baseline ?? 3) + (currentSet().mode === WORKOUT_MODE.ECCENTRIC ? 0 : 0.5);
   }
   const rangeOfMotion = () => {
     const { rangeTop, rangeBottom } = Trainer.reps();
@@ -78,10 +78,12 @@ export function createWorkoutService(
   };
 
   createRenderEffect(() => {
-    const rep = Math.floor(repCount());
-    const existingSamples = untrack(currentSetSamples);
-    if (rep >= 0 && state() === "workout") {
-      setCurrentSetSamples([...existingSamples, Trainer.sample()]);
+    if (currentSet()) {
+      const rep = Math.floor(repCount());
+      const existingSamples = untrack(currentSetSamples);
+      if (rep >= 0 && state() === "workout") {
+        setCurrentSetSamples([...existingSamples, Trainer.sample()]);
+      }
     }
   });
 

@@ -207,7 +207,8 @@ export async function getEstimated1RepMax(user_id: string, exercise_id: string) 
     selector: {
       type: "WORKOUT_SET",
       user_id,
-      exercise_id
+      exercise_id,
+      time: { $gt: 0 }
     },
     sort: [{ time: "desc" }],
     limit: 10

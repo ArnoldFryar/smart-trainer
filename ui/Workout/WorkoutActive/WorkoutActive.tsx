@@ -46,24 +46,26 @@ export function WorkoutActive(props: WorkoutActive.Props) {
   wakeLock();
 
   return (
-    <WorkoutActiveView
-      state={workoutState.state}
-      set={workoutState.currentSet}
-      setDisplay={workoutState.currentSetActivationConfig.display}
-      onComplete={props.onComplete}
-      actions={{ ...actions, complete: props.onComplete }}
-      video=""
-      unit={"lbs" /* TODO: get from user preferences */}
-      leftWeight={leftWeight()}
-      rightWeight={rightWeight()}
-      targetWeight={0}
-      currentRep={currentRep()}
-      calibrationRepsRemaining={workoutState.calibrationRepsRemaining}
-      leftROM={leftROM()}
-      rightROM={rightROM()}
-      meanVelocityPerRep={meanVelocityPerRep()}
-      setMetrics={workoutState.currentSetMetrics}
-    />
+    <Show when={workoutState.currentSet}>
+      <WorkoutActiveView
+        state={workoutState.state}
+        set={workoutState.currentSet}
+        setDisplay={workoutState.currentSetActivationConfig.display}
+        onComplete={props.onComplete}
+        actions={{ ...actions, complete: props.onComplete }}
+        video=""
+        unit={"lbs" /* TODO: get from user preferences */}
+        leftWeight={leftWeight()}
+        rightWeight={rightWeight()}
+        targetWeight={0}
+        currentRep={currentRep()}
+        calibrationRepsRemaining={workoutState.calibrationRepsRemaining}
+        leftROM={leftROM()}
+        rightROM={rightROM()}
+        meanVelocityPerRep={meanVelocityPerRep()}
+        setMetrics={workoutState.currentSetMetrics}
+      />
+    </Show>
   );
 }
 
