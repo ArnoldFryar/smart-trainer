@@ -1,9 +1,9 @@
 import { getForces, getReps } from "../device/activate";
 import { promisifyTimeout } from "../util/promisify.js";
 import { reactivePromise } from '../util/signals.js';
-import { Accessor, createEffect, untrack } from "solid-js";
+import { Accessor, createEffect, createMemo, untrack } from "solid-js";
 import { Phase } from "./util";
-import { beep, beepBeepBeep } from "../util/sounds";
+import { beep, beepBeepBeep, repsLeft } from "../util/sounds";
 import { SetConfig } from ".";
 
 export const WORKOUT_MODE = {
@@ -86,7 +86,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     name: "Isotonic",
     description: "Old School",
     getActivationConfig({ e1rm, rir, reps }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, rir, reps);
+      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm / 2, rir, reps);
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -111,7 +111,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     name: "Overload",
     description: "Time Under Tension",
     getActivationConfig({ e1rm, spotterVelocity, reps, forcedReps }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm, 0, reps - forcedReps);
+      const weight = getAppropriateWeight(WORKOUT_MODE.STATIC, e1rm / 2, 0, reps - forcedReps);
       const rampDown = 2 * Math.pow(weight, 1/3);
       const rampUp = rampDown * 2.5;
       const loadVelocity = spotterVelocity + 100;
@@ -141,7 +141,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     name: "Eccentric",
     description: "Eccentric Only",
     getActivationConfig({ e1rm, reps, rir }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.ECCENTRIC, e1rm, rir, reps);
+      const weight = getAppropriateWeight(WORKOUT_MODE.ECCENTRIC, e1rm / 2, rir, reps);
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -166,7 +166,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     name: "Pump",
     description: "Power Output",
     getActivationConfig({ e1rm, time }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.PUMP, e1rm, 0, Math.pow(time, 0.75));
+      const weight = getAppropriateWeight(WORKOUT_MODE.PUMP, e1rm / 2, 0, Math.pow(time, 0.75));
       return {
         reps: getReps(MAX_REPS),
         forces: getForces(weight, {
@@ -218,7 +218,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
     name: "Concentric",
     description: "Concentric Only",
     getActivationConfig({ e1rm, rir, reps }) {
-      const weight = getAppropriateWeight(WORKOUT_MODE.CONCENTRIC, e1rm, rir, reps + 10);
+      const weight = getAppropriateWeight(WORKOUT_MODE.CONCENTRIC, e1rm / 2, rir, reps + 10);
       return {
         reps: getReps(reps),
         forces: getForces(weight, {
@@ -339,14 +339,16 @@ export const LIMIT_HANDLERS: LimitHandlers = {
     };
   },
   [WORKOUT_LIMIT.SPOTTER]: ({ forcedReps }) => {
-    return (repCount, phases, aborted) => {
+    return (_repCount, phases, aborted) => {
       return reactivePromise((resolve) => {
-        const concentricReps = () => phases().filter(p => p.phase === "concentric");
-        const prevRep = (i: number) => concentricReps()[Math.floor(repCount() - i)];
+        const completedPhases = () => phases().slice(0, -1);
+        const concentricReps = () => completedPhases().filter(p => p.phase === "concentric");
+        const concentricRepCount = createMemo(() => concentricReps().length);
+        const prevRep = (i: number) => concentricReps()[Math.floor(concentricRepCount() - i)];
         const maxMinForce = () => Math.max(...concentricReps().map(rep => rep.force.min));
         let currentForcedReps = 0;
         createEffect(() => {
-          if (repCount() >= 3 && repCount() % 1 === 0) {
+          if (concentricRepCount() >= 3) {
             untrack(() => {
               try {
                 if (prevRep(1).force.min < maxMinForce()) {
@@ -355,12 +357,10 @@ export const LIMIT_HANDLERS: LimitHandlers = {
                     beepBeepBeep();
                     resolve();
                   } else {
-                    console.log(`${forcedReps - currentForcedReps} more?`);
-                    beep();
+                    repsLeft(forcedReps - currentForcedReps);
                   }
-                } else {
-                  console.log("keep going", repCount())
-                  currentForcedReps = 0;
+                } else if (currentForcedReps > 0) {
+                  repsLeft(forcedReps - currentForcedReps);
                 }
               } catch (e) {
                 debugger;
@@ -417,13 +417,17 @@ export const LIMIT_HANDLERS: LimitHandlers = {
 } as const;
 
 function getAppropriateWeight(mode, e1rm, rir, repCount = 15 /* default for pump */) {
-  const e1rmMultiplier = mode === "eccentric" ? 1.4 : 1;
+  const e1rmMultiplier = mode === WORKOUT_MODE.ECCENTRIC ? 1.4 : 1;
   const repMax = repCount + rir;
-  return getMaxWeight(e1rm * e1rmMultiplier, repMax);
+  return estimateXRepMaxLombardi(e1rm * e1rmMultiplier, repMax);
 }
 
 function getMaxWeight(e1rm, reps) {
   return e1rm / (1 + reps / 30);
+}
+
+function estimateXRepMaxLombardi(oneRepMax: number, reps: number) {
+  return oneRepMax / Math.pow(reps, 0.1);
 }
 
 function getMaxReps(e1rm, weight) {

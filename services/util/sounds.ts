@@ -8,3 +8,19 @@ export function beepBeepBeep() {
   setTimeout(beep, 100);
   setTimeout(beep, 200);
 }
+
+export function speak(text: string) {
+  const utterThis = new SpeechSynthesisUtterance(text);
+  utterThis.lang = "en-US";
+  speechSynthesis.speak(utterThis);
+}
+
+export function repsLeft(numReps: number) {
+  if (numReps === 0) {
+    return beepBeepBeep();
+  } else if (numReps === 1) {
+    return speak("1 more");
+  } else {
+    return speak(""+numReps);
+  }
+}
