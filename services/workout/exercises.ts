@@ -21,6 +21,7 @@ const BACK_SQUAT_SS = 242;
 const BENCH_SQUAT_RATIO = 0.75;
 // https://strengthlevel.com/
 const BACK_SQUAT_SL = 219.2;
+const BACK_SQUAT_SL_INT_RATIO = 1.5;
 const avg = (...args: number[]) => args.reduce((a, b) => a + b, 0) / args.length;
 
 export type Exercise = {
@@ -126,6 +127,15 @@ export const EXERCISES: Record<string, Exercise> = {
     mvt: 0.2,
     equipment: EQUIPMENT.HANDLES,
     movement: MOVEMENT.VERTICAL_PUSH,
+  },
+  DB_UPRIGHT_ROW: {
+    id: "DB_UPRIGHT_ROW",
+    ratio: avg(
+      0.35 / BACK_SQUAT_SL_INT_RATIO,
+    ),
+    mvt: 0.2,
+    equipment: EQUIPMENT.HANDLES,
+    movement: MOVEMENT.VERTICAL_PULL,
   },
   THRUSTER: {
     id: "THRUSTER",
