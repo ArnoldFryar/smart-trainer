@@ -191,9 +191,18 @@ export function Slider(props) {
     const percent = (+slider_input.value - +slider_input.min) / (+slider_input.max - +slider_input.min);
     const space = slider_input.offsetWidth - slider_thumb.offsetWidth;
 
-    slider_thumb.setAttribute("style", `left: ${percent * space}px`);
-    slider_line.setAttribute("style", `width: ${percent * space}px`);
     slider_thumb.innerHTML = slider_input.value;
+    slider_thumb.setAttribute("style", `left: ${percent * space}px`);
+    if (props.min < 0) {
+      const value = +slider_input.value;
+      const valuePercent = value / (+slider_input.max - +slider_input.min);
+      const zeroPercent = Math.abs(props.min) / (+slider_input.max - +slider_input.min);
+      const zero = zeroPercent * space + slider_thumb.offsetWidth / 2;
+      const width = Math.abs(valuePercent) * space;
+      slider_line.setAttribute("style", `left: ${value > 0 ? zero : zero - width}px; width: ${width}px`);
+    } else {
+      slider_line.setAttribute("style", `width: ${percent * space}px`);
+    }
   }
 
   onMount(() => {
@@ -238,6 +247,8 @@ export function Slider(props) {
           [&::-webkit-slider-thumb]:opacity-0
           [&::-webkit-slider-thumb]:rounded-full
         `} />
+      
+      <div ref={slider_line} class={`absolute h-0.5 rounded-l w-0 -translate-y-2/4 z-[2] left-0 top-2/4 bg-primary-500 peer-hover:bg-primary-400`} />
       <div 
         ref={slider_thumb}
         class={`
@@ -261,7 +272,6 @@ export function Slider(props) {
         `} />
       <div class={`h-0.5 rounded w-full bg-gray-600 -translate-y-2/4 absolute z-[1] left-0 top-2/4 peer-hover:bg-gray-500`}>
       </div>
-      <div ref={slider_line} class={`absolute h-0.5 rounded-l w-0 -translate-y-2/4 z-[2] left-0 top-2/4 bg-primary-500 peer-hover:bg-primary-400`} />
       <div>{props.labelLow}</div>
       <div>{props.labelHigh}</div>
     </div>

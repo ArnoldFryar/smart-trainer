@@ -9,7 +9,7 @@ import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
 import { createAbortEffect, reactivePromise } from "../util/signals";
 import { SetConfig } from "./index";
-import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
+import { LIMIT_HANDLERS, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
 import { getSetMetrics, splitSamplesByPhase } from "./util";
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
@@ -25,7 +25,10 @@ export function createWorkoutService(
   );
   const [currentSetSamples, setCurrentSetSamples] = createSignal<Sample[]>([]);
   const currentSetActivationConfig = () => {
-    return WORKOUT_MODE_CONFIGS[currentSet()?.mode]?.getActivationConfig(currentSet()?.modeConfig as any);
+    return {
+      ...WORKOUT_MODE_CONFIGS[currentSet()?.mode]?.getActivationConfig(currentSet()?.modeConfig as any),
+      ...LIMIT_HANDLERS[currentSet()?.limit]?.(currentSet()?.limitConfig as any)
+    };
   };
   const calibrationReps = () => {
     // We prefer to end on a concentric rep, so we add 0.5 to the baseline (except for eccentric only mode)
@@ -95,10 +98,12 @@ export function createWorkoutService(
           return;
         }
 
+        const { reps, forces, limit } = currentSetActivationConfig();
+
         setState("calibrating");
         setCurrentSetSamples([]);
 
-        await Trainer.activate(currentSetActivationConfig().reps, currentSetActivationConfig().forces);
+        await Trainer.activate(reps, forces);
         await setUserHue(currentSet().hue);
 
         setLoading(false);
@@ -113,7 +118,7 @@ export function createWorkoutService(
 
         setState("workout");
 
-        await currentSetActivationConfig().limit(repCount, currentSetPhases, aborted);
+        await limit(repCount, currentSetPhases, aborted);
         await Trainer.stop();
         saveSet();
 

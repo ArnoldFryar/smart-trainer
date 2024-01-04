@@ -1,6 +1,6 @@
 import { Exercise, PUSH_EXERCISES, PULL_EXERCISES, LEG_EXERCISES, ACCESSORY_EXERCISES, EXERCISES } from "./exercises";
-import { WORKOUT_MODE } from "./modes";
-import { getEstimated1RepMax, saveSet } from "../db/settings.js";
+import { WORKOUT_LIMIT, WORKOUT_MODE } from "./modes";
+import { saveSet } from "../db/settings.js";
 import { getSetMetrics } from "./util.js";
 import { Sample, encodeSamples } from "../device/cables.js";
 
@@ -11,13 +11,17 @@ export type SetConfig = {
   rest: number;
   mode: keyof typeof WORKOUT_MODE;
   modeConfig: {
-    e1rm?: number,
-    reps?: number;
-    time?: number;
-    rir?: number;
-    forcedReps?: number;
+    weight?: number;
+    weightIncrement?: number;
     spotterVelocity?: number;
   },
+  limit: keyof typeof WORKOUT_LIMIT;
+  limitConfig: {
+    reps?: number;
+    time?: number;
+    forcedReps?: number;
+    velocityLoss?: number;
+  }
   userId: string;
   hue: number;
 };
@@ -27,11 +31,14 @@ export type WorkoutConfig = {
   sets: Array<{
     exercise: keyof Exercise;
     mode: keyof typeof WORKOUT_MODE;
+    limit: keyof typeof WORKOUT_LIMIT;
+    weight?: number;
+    weightIncrement?: number;
+    spotterVelocity?: number;
     reps?: number;
     time?: number;
-    rir?: number;
     forcedReps?: number;
-    spotterVelocity?: number;
+    velocityLoss?: number;
   }>;
 }
 
@@ -116,18 +123,19 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
   }
 
   for (const set of sets) {
-    const { mode, exercise: exerciseId, ...modeConfig } = set;
+    const { exercise: exerciseId, mode, limit, weight, weightIncrement, spotterVelocity, ...limitConfig } = set;
     const exercise = EXERCISES[set.exercise];
     for (const userId of userIds) {
       const user = users[userId];
       setConfigs.push(async () => {
-        const e1rm = await getEstimated1RepMax(userId, exerciseId) || user.squat * exercise.ratio;
         return {
           exercise,
           userId,
           hue: user.hue,
           mode,
-          modeConfig: { e1rm, ...normalizeModeConfig(modeConfig) },
+          modeConfig: normalizeModeConfig({ weight, weightIncrement, spotterVelocity }),
+          limit,
+          limitConfig,
           rest: 10000,
         }
       });
@@ -139,7 +147,16 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
 
 function normalizeModeConfig(config) {
   if (config.spotterVelocity) {
+    // m/s to mm/s
     config.spotterVelocity *= 1000;
+  }
+  if (config.weight) {
+    // lbs to kg
+    config.weight /= 2 * 2.2;
+  }
+  if (config.weightIncrement) {
+    // lbs to kg
+    config.weightIncrement /= 2 * 2.2;
   }
   return config;
 }

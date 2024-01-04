@@ -11,7 +11,6 @@ import {
   WorkoutConfig,
 } from "../../../services/workout/index.js";
 import { wakeLock } from "../../../services/util/wake-lock.js";
-import { WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
 
 export namespace WorkoutActive {
   export interface Props {
@@ -50,7 +49,6 @@ export function WorkoutActive(props: WorkoutActive.Props) {
       <WorkoutActiveView
         state={workoutState.state}
         set={workoutState.currentSet}
-        setDisplay={workoutState.currentSetActivationConfig.display}
         onComplete={props.onComplete}
         actions={{ ...actions, complete: props.onComplete }}
         video=""
@@ -73,7 +71,6 @@ export namespace WorkoutActiveView {
   export interface Props {
     state: "calibrating" | "rest" | "workout" | "paused" | "complete";
     set: SetConfig;
-    setDisplay: ReturnType<typeof WORKOUT_MODE_CONFIGS[keyof typeof WORKOUT_MODE]["getActivationConfig"]>["display"];
     actions: {
       next: () => void;
       prev: () => void;
@@ -130,7 +127,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           video=""
           leftWeight={props.leftWeight}
           rightWeight={props.rightWeight}
-          targetWeight={props.setDisplay.weight}
+          targetWeight={props.set.modeConfig.weight}
           currentRep={props.currentRep}
           leftROM={props.leftROM}
           rightROM={props.rightROM}
@@ -141,11 +138,10 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           </Show>
           <Show when={props.state === "workout"}>
             <Reps
-              targetVelocity={props.setDisplay.highVelocity}
-              stopVelocity={props.setDisplay.lowVelocity}
+              targetVelocity={props.set.modeConfig.spotterVelocity}
               meanVelocityPerRep={props.meanVelocityPerRep}
               currentRep={props.currentRep}
-              totalReps={props.set.modeConfig.reps}
+              totalReps={props.set.limitConfig.reps}
               />
             {/* <Show when={props.set.limit === "ASSESSMENT" || props.set.limit === "SPOTTER"}>
               <Reps
@@ -234,20 +230,19 @@ export function WorkoutActiveContainer(props: WorkoutActiveContainer.Props) {
 namespace Reps {
   export interface Props {
     targetVelocity: number;
-    stopVelocity: number;
     meanVelocityPerRep: number[];
     currentRep: number;
     totalReps: number;
   }
 }
 
-const CURVE_THRESHOLD = 0.2;
+// const CURVE_THRESHOLD = 0.2;
 
 export function Reps(props: Reps.Props) {
-  const softMax = props.targetVelocity + props.stopVelocity;
-  const k =
-    Math.log(1 / CURVE_THRESHOLD - 1) /
-    ((props.stopVelocity / softMax) * 2 - 1);
+  // const softMax = props.targetVelocity + props.stopVelocity;
+  // const k =
+  //   Math.log(1 / CURVE_THRESHOLD - 1) /
+  //   ((props.stopVelocity / softMax) * 2 - 1);
   const sCurve = (x: number) => x; // 1 / (1 + Math.exp(k * ((x / softMax) * 2 - 1)));
   const maxValue = () =>
     sCurve(Math.max(props.targetVelocity, ...props.meanVelocityPerRep));
@@ -278,14 +273,14 @@ export function Reps(props: Reps.Props) {
           class={`absolute z-20 m-1 flex-1 border-t border-white/30`}
           style={`height: ${getValue(props.targetVelocity)}%; width:100%;`}
         />
-        <div
+        {/* <div
           class={`absolute z-20 m-1 flex-1 border-t border-white/60`}
           style={`height: ${getValue(props.stopVelocity)}%; width:100%;`}
         />
         <div
           class={`absolute z-0 m-1 flex-1 border-t border-white`}
           style={`height: ${getValue(props.stopVelocity)}%; width:100%;`}
-        />
+        /> */}
       </div>
       <div class="text-right mt-8">
         <div class="">

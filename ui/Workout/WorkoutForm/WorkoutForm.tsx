@@ -10,7 +10,7 @@ import {
 } from "../../_common/Elements/Elements.js";
 import { createLocalSignal } from "../../../services/util/signals.js";
 import { DEFAULT_USERS, WorkoutConfig } from "../../../services/workout/index.js";
-import { ACTIVE_WORKOUT_MODES, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
+import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
 import { getNestedFormData } from "../../../services/util/form.js";
 export namespace WorkoutForm {
   export interface Props {
@@ -99,9 +99,10 @@ function UserSelect(props: { value: string[] }) {
 
 const DEFAULT_SET = {
   exercise: "BACK_SQUAT",
-  mode: WORKOUT_MODE.ADAPTIVE,
-  forcedReps: 3,
-  spotterVelocity: 0.25
+  mode: WORKOUT_MODE.CONVENTIONAL,
+  limit: WORKOUT_LIMIT.REPS,
+  reps: 10,
+  weight: 40
 };
 
 function Sets(props) {
@@ -172,8 +173,14 @@ function Sets(props) {
 }
 
 function Set(props) {
-  const [mode, setMode] = createSignal(props.value.mode || WORKOUT_MODE.ADAPTIVE);
+  // TODO: on excerise change, select an appropriate weight 
+  // relative to the weight for the previous exercise
+  const [exercise, setExercise] = createSignal(props.value.exercise || EXERCISES.BACK_SQUAT.id);
+  const [mode, setMode] = createSignal(props.value.mode || WORKOUT_MODE.CONVENTIONAL);
+  const [limit, setLimit] = createSignal(props.value.limit || WORKOUT_LIMIT.REPS);
   const selectMode = (e) => setMode(e.target.value);
+  const selectExercise = (e) => setExercise(e.target.value);
+  const selectLimit = (e) => setLimit(e.target.value);
   const onOpen = (e) => {
     if (e.currentTarget.open) {
       props.onOpen();
@@ -191,7 +198,7 @@ function Set(props) {
         <span class="text-white inline-block ml-1">
           {props.value.exercise}
           <span class="block text-xs text-gray-400">
-            {WORKOUT_MODE_CONFIGS[mode()].name}
+            {WORKOUT_MODE_CONFIGS[mode()]?.name}
             <Show when={props.value.reps}>
               &nbsp;&bull; {props.value.reps}reps
             </Show>
@@ -206,14 +213,13 @@ function Set(props) {
             </Show>
           </span>
         </span>
-        <Show when={props.canRemove}><Button class="float-right" onClick={onRemove}>
-          ✕
-        </Button></Show>
-        
+        <Show when={props.canRemove}>
+          <Button class="float-right" onClick={onRemove}>✕</Button>
+        </Show>
       </summary>
       <div class="border border-gray-800 px-2 -mt-2">
         <FieldSet label="Exercise">
-          <Select name={`${props.name}.exercise`} class="mr-2">
+          <Select name={`${props.name}.exercise`} class="mr-2" onChange={selectExercise}>
             <For each={EXERCISE_KEYS}>
               {(key) => (
                 <option selected={key === props.value.exercise}>
@@ -232,27 +238,49 @@ function Set(props) {
             )}
           </For>
         </RadioGroup>
-        <Show when={mode() !== WORKOUT_MODE.ADAPTIVE && mode() !== WORKOUT_MODE.PUMP}>
-          <FieldSet label="Reps">
-            <Slider name={`${props.name}.reps`} value={props.value.reps ?? 10} max={20} min={1}/>
+        <FieldSet label="Weight (lbs)">
+          {/* TODO: show percentage of e1RM & estimate reps */}
+          {/* await getEstimated1RepMax(userId, exerciseId) || user.squat * exercise.ratio; */}
+          <Slider name={`${props.name}.weight`} value={props.value.weight ?? 40} max={440} min={1}/>
+        </FieldSet>
+        <FieldSet label="Spotter Velocity (m/s)">
+          {/* TODO: show percentage of eMVT */}
+          <Slider name={`${props.name}.spotterVelocity`} value={props.value.spotterVelocity ?? 0.25} max={0.5} min={0} step={0.05}/>
+        </FieldSet>
+        <Show when={mode() === WORKOUT_MODE.CONVENTIONAL || mode() === WORKOUT_MODE.ECCENTRIC}>
+          <FieldSet label="Progression/Regression (lbs)">
+            {/* TODO: show ± percentage of e1RM */}
+            <Slider name={`${props.name}.weightIncrease`} value={props.value.weightIncrease ?? 0} max={10} min={-10}/>
           </FieldSet>
         </Show>
-        <Show when={mode() === WORKOUT_MODE.PUMP}>
-          <FieldSet label="Time">
+        <RadioGroup label="Workout Limit" checkedValue={limit()} onChange={selectLimit}>
+          <For each={Object.keys(WORKOUT_LIMIT)}>
+            {(limit) => (
+              <Radio name={`${props.name}.limit`} value={limit}>
+                <span class="text-sm">{limit}</span>
+              </Radio>
+            )}
+          </For>
+        </RadioGroup>
+        {/* TODO: show estimated RPE */}
+        <Show when={limit() === WORKOUT_LIMIT.REPS}>
+          <FieldSet label="Reps">
+            <Slider name={`${props.name}.reps`} value={props.value.reps ?? 10} max={30} min={1}/>
+          </FieldSet>
+        </Show>
+        <Show when={limit() === WORKOUT_LIMIT.TIME}>
+          <FieldSet label="Time (s)">
             <Slider name={`${props.name}.time`} value={props.value.time ?? 30} max={120} min={10} step={10}/>
           </FieldSet>
         </Show>
-        <Show when={mode() === WORKOUT_MODE.ADAPTIVE || mode() === WORKOUT_MODE.TUT}>
+        <Show when={limit() === WORKOUT_LIMIT.FORCED_REPS}>
           <FieldSet label="Forced Reps">
             <Slider name={`${props.name}.forcedReps`} value={props.value.forcedReps ?? 3} max={10} min={1}/>
           </FieldSet>
-          <FieldSet label="Spotter Velocity (m/s)">
-            <Slider name={`${props.name}.spotterVelocity`} value={props.value.spotterVelocity ?? 0.25} max={0.5} min={0} step={0.05}/>
-          </FieldSet>
         </Show>
-        <Show when={mode() === WORKOUT_MODE.STATIC || mode() === WORKOUT_MODE.ECCENTRIC}>
-          <FieldSet label="Reps in Reserve">
-            <Slider name={`${props.name}.rir`} value={props.value.rir ?? 3} max={10} min={0}/>
+        <Show when={limit() === WORKOUT_LIMIT.VELOCITY_LOSS}>
+          <FieldSet label="Velocity Loss (%)">
+            <Slider name={`${props.name}.velocityLoss`} value={props.value.spotterVelocity ?? 40} max={80} min={10} step={5}/>
           </FieldSet>
         </Show>
       </div>
