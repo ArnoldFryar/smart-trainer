@@ -238,21 +238,24 @@ function Set(props) {
             )}
           </For>
         </RadioGroup>
-        <FieldSet label="Weight (lbs)">
+        <FieldSet label={`${mode() === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"} (lbs)`}>
           {/* TODO: show percentage of e1RM & estimate reps */}
           {/* await getEstimated1RepMax(userId, exerciseId) || user.squat * exercise.ratio; */}
           <Slider name={`${props.name}.weight`} value={props.value.weight ?? 40} max={440} min={1}/>
         </FieldSet>
+        <Show when={mode() === WORKOUT_MODE.PROGRESSION}>
+          <FieldSet label="Maximum Weight (lbs)">
+            {/* TODO: show ± percentage of e1RM */}
+            <Slider name={`${props.name}.maxWeight`} value={Math.max(props.value.maxWeight, props.value.weight) ?? 40} max={440} min={1}/>
+          </FieldSet>
+          <FieldSet label="Incremental Reps">
+            <Slider name={`${props.name}.progressionReps`} value={props.value.progressionReps ?? 3} max={10} min={1}/>
+          </FieldSet>
+        </Show>
         <FieldSet label="Spotter Velocity (m/s)">
           {/* TODO: show percentage of eMVT */}
           <Slider name={`${props.name}.spotterVelocity`} value={props.value.spotterVelocity ?? 0.25} max={0.5} min={0} step={0.05}/>
         </FieldSet>
-        <Show when={mode() === WORKOUT_MODE.CONVENTIONAL || mode() === WORKOUT_MODE.ECCENTRIC}>
-          <FieldSet label="Progression/Regression (lbs)">
-            {/* TODO: show ± percentage of e1RM */}
-            <Slider name={`${props.name}.weightIncrease`} value={props.value.weightIncrease ?? 0} max={10} min={-10}/>
-          </FieldSet>
-        </Show>
         <RadioGroup label="Workout Limit" checkedValue={limit()} onChange={selectLimit}>
           <For each={Object.keys(WORKOUT_LIMIT)}>
             {(limit) => (

@@ -83,13 +83,14 @@ export function getStopCommand() {
 export function getForces(
   softMax: number,
   profile = PRESETS.NEW_SCHOOL,
-  increment = 0
+  increment = 0,
+  max = softMax + 10,
 ) {
   return {
     ...profile,
     forces: {
       min: 0,
-      max: softMax + 10,
+      max,
     },
     softMax,
     increment,

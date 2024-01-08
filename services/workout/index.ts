@@ -12,7 +12,8 @@ export type SetConfig = {
   mode: keyof typeof WORKOUT_MODE;
   modeConfig: {
     weight?: number;
-    weightIncrement?: number;
+    maxWeight?: number;
+    progressionReps?: number;
     spotterVelocity?: number;
   },
   limit: keyof typeof WORKOUT_LIMIT;
@@ -33,7 +34,8 @@ export type WorkoutConfig = {
     mode: keyof typeof WORKOUT_MODE;
     limit: keyof typeof WORKOUT_LIMIT;
     weight?: number;
-    weightIncrement?: number;
+    maxWeight?: number;
+    progressionReps?: number;
     spotterVelocity?: number;
     reps?: number;
     time?: number;
@@ -123,7 +125,7 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
   }
 
   for (const set of sets) {
-    const { exercise: exerciseId, mode, limit, weight, weightIncrement, spotterVelocity, ...limitConfig } = set;
+    const { exercise: exerciseId, mode, limit, weight, maxWeight, progressionReps, spotterVelocity, ...limitConfig } = set;
     const exercise = EXERCISES[set.exercise];
     for (const userId of userIds) {
       const user = users[userId];
@@ -133,7 +135,7 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
           userId,
           hue: user.hue,
           mode,
-          modeConfig: normalizeModeConfig({ weight, weightIncrement, spotterVelocity }),
+          modeConfig: normalizeModeConfig({ weight, maxWeight, progressionReps, spotterVelocity }),
           limit,
           limitConfig,
           rest: 10000,
@@ -154,9 +156,9 @@ function normalizeModeConfig(config) {
     // lbs to kg
     config.weight /= 2 * 2.2;
   }
-  if (config.weightIncrement) {
+  if (config.maxWeight) {
     // lbs to kg
-    config.weightIncrement /= 2 * 2.2;
+    config.maxWeight /= 2 * 2.2;
   }
   return config;
 }

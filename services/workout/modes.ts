@@ -8,6 +8,7 @@ import { SetConfig } from ".";
 
 export const WORKOUT_MODE = {
   CONVENTIONAL: "CONVENTIONAL",
+  PROGRESSION: "PROGRESSION",
   ASSESSMENT: "ASSESSMENT",
   ISOKINETIC: "ISOKINETIC",
   ECCENTRIC: "ECCENTRIC",
@@ -15,6 +16,7 @@ export const WORKOUT_MODE = {
 
 export const ACTIVE_WORKOUT_MODES = [
   WORKOUT_MODE.CONVENTIONAL,
+  WORKOUT_MODE.PROGRESSION,
   WORKOUT_MODE.ASSESSMENT,
   WORKOUT_MODE.ISOKINETIC,
   WORKOUT_MODE.ECCENTRIC,
@@ -41,7 +43,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.CONVENTIONAL]: {
     name: "Conventional",
     description: "Old School",
-    getActivationConfig({ weight, weightIncrement, spotterVelocity }) {
+    getActivationConfig({ weight, spotterVelocity }) {
       const rampDown = 2 * Math.pow(weight, 1/3);
       const eccentricRampUp = rampDown * 2.5;
       const concentricRampUp = rampDown / 2;
@@ -49,21 +51,45 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
       return {
         forces: getForces(weight, {
           concentric: {
-            decrease: { minMmS: 0, maxMmS: spotterVelocity, ramp: rampDown },
+            decrease: { minMmS: 0, maxMmS: spotterVelocity, ramp: spotterVelocity && rampDown },
             increase: { minMmS: loadVelocity, maxMmS: 500 + loadVelocity / 3, ramp: concentricRampUp },
           },
           eccentric: {
             decrease: { minMmS: -1300, maxMmS: -1200, ramp: weight },
             increase: { minMmS: -50, maxMmS: -20, ramp: eccentricRampUp },
           },
-        }, weightIncrement),
+        }),
+      }
+    }
+  },
+  [WORKOUT_MODE.PROGRESSION]: {
+    name: "Progression",
+    description: "Old School",
+    getActivationConfig({ weight, maxWeight, progressionReps, spotterVelocity }) {
+      const rampDown = 2 * Math.pow(weight, 1/3);
+      const eccentricRampUp = rampDown * 2.5;
+      const concentricRampUp = rampDown / 2;
+      const loadVelocity = spotterVelocity + 100;
+      const weightIncrement = maxWeight && ((maxWeight - weight) / progressionReps);
+      console.log({ weight, weightIncrement, maxWeight })
+      return {
+        forces: getForces(weight, {
+          concentric: {
+            decrease: { minMmS: 0, maxMmS: spotterVelocity, ramp: spotterVelocity && rampDown },
+            increase: { minMmS: loadVelocity, maxMmS: 500 + loadVelocity / 3, ramp: concentricRampUp },
+          },
+          eccentric: {
+            decrease: { minMmS: -1300, maxMmS: -1200, ramp: weight },
+            increase: { minMmS: -50, maxMmS: -20, ramp: eccentricRampUp },
+          },
+        }, weightIncrement, maxWeight),
       }
     }
   },
   [WORKOUT_MODE.ECCENTRIC]: {
     name: "Eccentric",
     description: "Eccentric Only",
-    getActivationConfig({ weight, weightIncrement, spotterVelocity }) {
+    getActivationConfig({ weight, spotterVelocity }) {
       const rampDown = 2 * Math.pow(weight, 1/3);
       const concentricRampDown = rampDown * 2;
       const concentricRampUp = rampDown / 3;
@@ -78,7 +104,7 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
             decrease: { minMmS: spotterVelocity - 50, maxMmS: -spotterVelocity, ramp: rampDown },
             increase: { minMmS: -100, maxMmS: -50, ramp: eccentricRampUp },
           }
-        }, weightIncrement),
+        }),
       }
     }
   },
