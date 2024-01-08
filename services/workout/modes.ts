@@ -71,7 +71,6 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
       const concentricRampUp = rampDown / 2;
       const loadVelocity = spotterVelocity + 100;
       const weightIncrement = maxWeight && ((maxWeight - weight) / progressionReps);
-      console.log({ weight, weightIncrement, maxWeight })
       return {
         forces: getForces(weight, {
           concentric: {

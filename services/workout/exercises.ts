@@ -117,6 +117,13 @@ export const EXERCISES: Record<string, Exercise> = {
     mvt: 0.15,
     movement: MOVEMENT.LEGS_HINGE,
   },
+  SUITCASE_SQUAT: {
+    id: "SUITCASE_SQUAT",
+    ratio: 1,
+    equipment: EQUIPMENT.HANDLES,
+    mvt: 0.3,
+    movement: MOVEMENT.LEGS_SQUAT,
+  },
   OVERHEAD_PRESS: {
     id: "OVERHEAD_PRESS",
     ratio: avg(
