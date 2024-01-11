@@ -158,7 +158,7 @@ export function RadioGroup(props) {
 export function FieldSet(props) {
   return (
     <fieldset class="my-4" onChange={props.onChange}>
-      <legend class="text-white font-light text-sm mb-1">{props.label}</legend>
+      <legend class="text-white font-light text-sm mb-1">{props.label} <span class="text-gray-400" style="font-size:0.8em;">{props.subtext}</span></legend>
       {props.children}
     </fieldset>
   );
@@ -188,10 +188,11 @@ export function Slider(props) {
   let slider_line!: HTMLDivElement;
 
   function showSliderValue() {
+    console.log("onInput")
     const percent = (+slider_input.value - +slider_input.min) / (+slider_input.max - +slider_input.min);
     const space = slider_input.offsetWidth - slider_thumb.offsetWidth;
 
-    slider_thumb.innerHTML = slider_input.value;
+    slider_thumb.innerHTML = slider_input.value + (props.unit ? `<div style="font-size:0.6em;opacity:0.8;margin-top:-1.2em;margin-bottom:-0.5em;">${props.unit}</div>` : "");
     slider_thumb.setAttribute("style", `left: ${percent * space}px`);
     if (props.min < 0) {
       const value = +slider_input.value;
@@ -258,6 +259,7 @@ export function Slider(props) {
           -translate-y-2/4
           bg-primary-900
           flex
+          flex-col
           justify-center
           items-center
           text-sm

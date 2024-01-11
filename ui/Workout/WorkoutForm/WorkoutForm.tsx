@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from "solid-js";
+import { batch, createEffect, createResource, createSignal, For, Show, untrack } from "solid-js";
 import { EXERCISES } from "../../../services/workout/exercises.js";
 import {
   Button,
@@ -12,6 +12,7 @@ import { createLocalSignal } from "../../../services/util/signals.js";
 import { DEFAULT_USERS, WorkoutConfig } from "../../../services/workout/index.js";
 import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
 import { getNestedFormData } from "../../../services/util/form.js";
+import { getEstimated1RepMax } from "../../../services/db/settings.js";
 export namespace WorkoutForm {
   export interface Props {
     config: WorkoutConfig;
@@ -172,15 +173,34 @@ function Sets(props) {
   );
 }
 
+function createInputSignal<T extends () => number>(syncedValue: T) {
+  const [value, setValue] = createSignal(syncedValue());
+  // createEffect(() => setValue(syncedValue()));
+  return [value, setValue, (e) => setValue(parseInt(e.target.value, 10))] as const;
+}
+
 function Set(props) {
+  const [weight, setWeight, onWeightInput] = createInputSignal(() => props.value.weight);
+  const [maxWeight, setMaxWeight, onMaxWeightInput] = createInputSignal(() => props.value.maxWeight);
+
+  const [e1rm] = createResource(async () => {
+    const e1rmPerCableKg = await getEstimated1RepMax("MICHAEL", props.value.exercise);
+    return e1rmPerCableKg * 2.2;
+  });
+
   // TODO: on excerise change, select an appropriate weight 
   // relative to the weight for the previous exercise
-  const [exercise, setExercise] = createSignal(props.value.exercise || EXERCISES.BACK_SQUAT.id);
-  const [mode, setMode] = createSignal(props.value.mode || WORKOUT_MODE.CONVENTIONAL);
-  const [limit, setLimit] = createSignal(props.value.limit || WORKOUT_LIMIT.REPS);
-  const selectMode = (e) => setMode(e.target.value);
-  const selectExercise = (e) => setExercise(e.target.value);
-  const selectLimit = (e) => setLimit(e.target.value);
+  createEffect((prev: number | undefined) => {
+    if (prev) {
+      const ratio = e1rm() / prev;
+      untrack(() => {
+        setWeight(weight() * ratio);
+        setMaxWeight(maxWeight() * ratio);
+      })
+    }
+    return e1rm() ?? prev;
+  })
+
   const onOpen = (e) => {
     if (e.currentTarget.open) {
       props.onOpen();
@@ -198,7 +218,7 @@ function Set(props) {
         <span class="text-white inline-block ml-1">
           {props.value.exercise}
           <span class="block text-xs text-gray-400">
-            {WORKOUT_MODE_CONFIGS[mode()]?.name}
+            {WORKOUT_MODE_CONFIGS[props.value.mode]?.name}
             <Show when={props.value.reps}>
               &nbsp;&bull; {props.value.reps}reps
             </Show>
@@ -219,7 +239,7 @@ function Set(props) {
       </summary>
       <div class="border border-gray-800 px-2 -mt-2">
         <FieldSet label="Exercise">
-          <Select name={`${props.name}.exercise`} class="mr-2" onChange={selectExercise}>
+          <Select name={`${props.name}.exercise`} class="mr-2">
             <For each={EXERCISE_KEYS}>
               {(key) => (
                 <option selected={key === props.value.exercise}>
@@ -229,7 +249,7 @@ function Set(props) {
             </For>
           </Select>
         </FieldSet>
-        <RadioGroup label="Workout Mode" checkedValue={mode()} onChange={selectMode}>
+        <RadioGroup label="Workout Mode" checkedValue={props.value.mode}>
           <For each={ACTIVE_WORKOUT_MODES}>
             {(mode) => (
               <Radio name={`${props.name}.mode`} value={mode}>
@@ -238,25 +258,25 @@ function Set(props) {
             )}
           </For>
         </RadioGroup>
-        <FieldSet label={`${mode() === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"} (lbs)`}>
-          {/* TODO: show percentage of e1RM & estimate reps */}
-          {/* await getEstimated1RepMax(userId, exerciseId) || user.squat * exercise.ratio; */}
-          <Slider name={`${props.name}.weight`} value={props.value.weight ?? 40} max={440} min={1}/>
+        <FieldSet 
+          label={`${props.value.mode === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"}`} 
+          subtext={`(${(100*weight()/e1rm()).toFixed(1)}% e1RM)`}>
+          <Slider name={`${props.name}.weight`} value={weight() ?? 40} max={440} min={1} unit="lbs" onInput={onWeightInput}/>
         </FieldSet>
-        <Show when={mode() === WORKOUT_MODE.PROGRESSION}>
-          <FieldSet label="Maximum Weight (lbs)">
+        <Show when={props.value.mode === WORKOUT_MODE.PROGRESSION}>
+          <FieldSet label="Maximum Weight" subtext={`(${(100*maxWeight()/e1rm()).toFixed(1)}% e1RM)`}>
             {/* TODO: show ± percentage of e1RM */}
-            <Slider name={`${props.name}.maxWeight`} value={Math.max(props.value.maxWeight, props.value.weight) ?? 40} max={440} min={1}/>
+            <Slider name={`${props.name}.maxWeight`} value={Math.max(maxWeight(), weight()) ?? 40} max={440} min={1} unit="lbs" onInput={onMaxWeightInput}/>
           </FieldSet>
-          <FieldSet label="Incremental Reps">
-            <Slider name={`${props.name}.progressionReps`} value={props.value.progressionReps ?? 3} max={10} min={1}/>
+          <FieldSet label="Incremental Steps">
+            <Slider name={`${props.name}.progressionReps`} value={props.value.progressionReps ?? 3} max={10} min={1} unit="reps"/>
           </FieldSet>
         </Show>
-        <FieldSet label="Spotter Velocity (m/s)">
+        <FieldSet label="Spotter Velocity" subtext="X% MVT">
           {/* TODO: show percentage of eMVT */}
-          <Slider name={`${props.name}.spotterVelocity`} value={props.value.spotterVelocity ?? 0.25} max={0.5} min={0} step={0.05}/>
+          <Slider name={`${props.name}.spotterVelocity`} value={props.value.spotterVelocity ?? 0.25} max={0.5} min={0} step={0.01} unit="m/s"/>
         </FieldSet>
-        <RadioGroup label="Workout Limit" checkedValue={limit()} onChange={selectLimit}>
+        <RadioGroup label="Workout Limit" checkedValue={props.value.limit}>
           <For each={Object.keys(WORKOUT_LIMIT)}>
             {(limit) => (
               <Radio name={`${props.name}.limit`} value={limit}>
@@ -266,24 +286,24 @@ function Set(props) {
           </For>
         </RadioGroup>
         {/* TODO: show estimated RPE */}
-        <Show when={limit() === WORKOUT_LIMIT.REPS}>
+        <Show when={props.value.limit === WORKOUT_LIMIT.REPS}>
           <FieldSet label="Reps">
-            <Slider name={`${props.name}.reps`} value={props.value.reps ?? 10} max={30} min={1}/>
+            <Slider name={`${props.name}.reps`} value={props.value.reps ?? 10} max={30} min={1} unit="reps"/>
           </FieldSet>
         </Show>
-        <Show when={limit() === WORKOUT_LIMIT.TIME}>
-          <FieldSet label="Time (s)">
-            <Slider name={`${props.name}.time`} value={props.value.time ?? 30} max={120} min={10} step={10}/>
+        <Show when={props.value.limit === WORKOUT_LIMIT.TIME}>
+          <FieldSet label="Time">
+            <Slider name={`${props.name}.time`} value={props.value.time ?? 30} max={120} min={10} step={10} unit="sec"/>
           </FieldSet>
         </Show>
-        <Show when={limit() === WORKOUT_LIMIT.FORCED_REPS}>
+        <Show when={props.value.limit === WORKOUT_LIMIT.FORCED_REPS}>
           <FieldSet label="Forced Reps">
-            <Slider name={`${props.name}.forcedReps`} value={props.value.forcedReps ?? 3} max={10} min={1}/>
+            <Slider name={`${props.name}.forcedReps`} value={props.value.forcedReps ?? 3} max={10} min={1} unit="reps"/>
           </FieldSet>
         </Show>
-        <Show when={limit() === WORKOUT_LIMIT.VELOCITY_LOSS}>
-          <FieldSet label="Velocity Loss (%)">
-            <Slider name={`${props.name}.velocityLoss`} value={props.value.spotterVelocity ?? 40} max={80} min={10} step={5}/>
+        <Show when={props.value.limit === WORKOUT_LIMIT.VELOCITY_LOSS}>
+          <FieldSet label="Velocity Loss">
+            <Slider name={`${props.name}.velocityLoss`} value={props.value.spotterVelocity ?? 40} max={80} min={10} step={5} unit="%"/>
           </FieldSet>
         </Show>
       </div>
