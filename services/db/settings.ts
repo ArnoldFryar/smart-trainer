@@ -2,6 +2,8 @@ import PouchDB from 'pouchdb';
 import PouchFind from 'pouchdb-find';
 import { SetConfig } from '../workout';
 import { Sample, decodeSamples } from '../device/cables';
+import { createLocalSignal } from '../util/signals';
+import { createEffect } from 'solid-js';
 PouchDB.plugin(PouchFind);
 
 export interface PouchDBBaseDocument {
@@ -78,6 +80,17 @@ const indexFields = [
   ["type", "user_id", "exercise_id", "key"],
   ["type", "user_id", "key", "time"]
 ];
+
+const [couchdb] = createLocalSignal("couchdb-url", "");
+createEffect<{ sync?, remote? }>((prev) => {
+  prev.sync?.cancel();
+  prev.remote?.close();
+
+  const remote = new PouchDB(couchdb());
+  const sync = db.sync(remote, { live:true, retry: true });
+
+  return { sync, remote };
+}, {})
 
 const indexPromise = indexFields.map(fields =>
   db.createIndex({
