@@ -293,6 +293,17 @@ function getRepMaxes(weights: number[]): Record<number | "e1rm" | "best", number
   return repMaxes;
 }
 
+export function groupSetsByDate(sets) {
+  return (sets??[]).reduce((groups, set) => {
+    const date = new Date(set.time).toDateString();
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(set);
+    return groups;
+  }, {});
+}
+
 function estimate1RepMaxLombardi(weight: number, reps: number) {
   return weight * Math.pow(reps, 0.1);
 }

@@ -184,7 +184,7 @@ function Set(props) {
   const [maxWeight, setMaxWeight, onMaxWeightInput] = createInputSignal(() => props.value.maxWeight);
 
   const [e1rm] = createResource(async () => {
-    const e1rmPerCableKg = await getEstimated1RepMax("MICHAEL", props.value.exercise);
+    const e1rmPerCableKg = (await getEstimated1RepMax("MICHAEL", props.value.exercise))?.e1rm;
     return e1rmPerCableKg * 2.2;
   });
 

@@ -77,6 +77,9 @@ const indexFields = [
   ["type", "user_id", "time"],
   ["type", "user_id", "workout_id"],
   ["type", "user_id", "exercise_id", "time"],
+  ["e1rm", "type", "user_id", "exercise_id", "time"],
+  ["bestEffort.weight", "type", "user_id", "exercise_id", "bestEffort.reps", "time"],
+  ["bestEffort.reps", "type", "user_id", "exercise_id"],
   ["type", "user_id", "exercise_id", "key"],
   ["type", "user_id", "key", "time"]
 ];
@@ -92,20 +95,22 @@ createEffect<{ sync?, remote? }>((prev) => {
   return { sync, remote };
 }, {})
 
-const indexPromise = indexFields.map(fields =>
+const indexPromise = Promise.all(indexFields.map(fields =>
   db.createIndex({
     index: { 
       fields,
       ddoc: `index-${fields.join("-")}`
     }
   })
-);
+));
 
 function upsert<T extends Schema>(type: T["type"], data: PartialSchema<T>) {
   return data._id ? db.put({ type, ...data } as any) : db.post({ type, ...data } as any);
 }
 
 async function find<T extends Schema>(type: T["type"], config: PouchDB.Find.FindRequest<any>): Promise<T[]> {
+  await indexPromise;
+
   return (await db.find({
     ...config,
     selector: {
@@ -135,7 +140,14 @@ export async function getSets(user_id: string) {
   const sets = await find("WORKOUT_SET", {
     selector: { user_id, time: { $gt: 0 } },
     sort: [{ time: "desc" }],
-    
+  });
+  return sets as WorkoutSet[];
+}
+
+export async function getSetsForExercise(user_id: string, exercise_id: string) {
+  const sets = await find("WORKOUT_SET", {
+    selector: { user_id, exercise_id, time: { $gt: 0 } },
+    sort: [{ time: "desc" }],
   });
   return sets as WorkoutSet[];
 }
@@ -213,31 +225,61 @@ export async function savePB(pb: PartialSchema<PersonalBest>) {
   return upsert("PERSONAL_BEST", pb);
 }
 
-
-const TIME_RANGE = 1000 * 60 * 60 * 12; // 12 hours
-export async function getEstimated1RepMax(user_id: string, exercise_id: string) {
-  const recentSets = (await db.find({
+export async function getEstimated1RepMax(user_id: string, exercise_id: string, time: number = Date.now()) {
+  const bestSets = (await db.find({
     selector: {
       type: "WORKOUT_SET",
       user_id,
       exercise_id,
-      time: { $gt: 0 }
+      time: { $lt: time },
+      e1rm: { $gt: null },
     },
-    sort: [{ time: "desc" }],
-    limit: 10
+    sort: [{ e1rm: "desc" }],
+    limit: 1
   })).docs as WorkoutSet[];
 
-  const time = recentSets[0]?.time;
-  const maxTime = time - TIME_RANGE;
-  let e1rm = 0;
-  for (const set of recentSets) {
-    if (set.time < maxTime) {
-      break;
-    }
-    e1rm = Math.max(e1rm, set.e1rm);
-  }
+  return bestSets[0];
+}
 
-  return e1rm;
+export async function getActualRepMax(user_id: string, exercise_id: string, reps: number, time: number = Date.now()) {
+  const bestSets = (await db.find({
+    selector: {
+      type: "WORKOUT_SET",
+      user_id,
+      exercise_id,
+      "bestEffort.reps": reps,
+      "bestEffort.weight": { $gt: null},
+      time: { $lt: time },
+    },
+    sort: [{ "bestEffort.weight": "desc" }],
+    limit: 1
+  })).docs as WorkoutSet[];
+
+  return bestSets[0];
+}
+
+export async function getHighestRepMax(user_id: string, exercise_id: string) {
+  const bestSets = (await db.find({
+    selector: {
+      type: "WORKOUT_SET",
+      user_id,
+      exercise_id,
+      "bestEffort.reps": { $gt: null },
+    },
+    sort: [{ "bestEffort.reps": "desc" }],
+    limit: 1
+  })).docs as WorkoutSet[];
+
+  return bestSets[0]?.bestEffort.reps ?? 0;
+}
+
+export async function getAllRepMaxes(user_id: string, exercise_id: string) {
+  const maxReps = await getHighestRepMax(user_id, exercise_id);
+  const bestSets = [];
+  for (let reps = 1; reps <= maxReps; reps++) {
+    bestSets.push(getActualRepMax(user_id, exercise_id, reps));
+  }
+  return Promise.all(bestSets);
 }
 
 (window as any).db = db;

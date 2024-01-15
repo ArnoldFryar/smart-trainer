@@ -10,6 +10,7 @@ const Manual = lazy(() => import("../Manual/Manual.js"));
 const Settings = lazy(() => import("../Settings/Settings.js"));
 const Workout = lazy(() => import("../Workout/Workout.js"));
 const AnalyzeSet = lazy(() => import("../AnalyzeSet/AnalyzeSet.js"));
+const AnalyzeExercise = lazy(() => import("../AnalyzeExercise/AnalyzeExercise.js"));
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
         </Route>
         <Route path="/workout" component={Workout}/>
         <Route path="/set/:setId" component={AnalyzeSet}/>
+        <Route path="/exercise/:exerciseId" component={AnalyzeExercise}/>
       </Routes>
       <Debug />
     </Router>

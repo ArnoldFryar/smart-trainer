@@ -188,7 +188,6 @@ export function Slider(props) {
   let slider_line!: HTMLDivElement;
 
   function showSliderValue() {
-    console.log("onInput")
     const percent = (+slider_input.value - +slider_input.min) / (+slider_input.max - +slider_input.min);
     const space = slider_input.offsetWidth - slider_thumb.offsetWidth;
 

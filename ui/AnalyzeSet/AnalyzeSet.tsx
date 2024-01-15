@@ -1,4 +1,4 @@
-import { useParams } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import { getSet, getSetSamples } from "../../services/db/settings";
 import { For, Match, Switch, createResource, createSignal, onMount } from "solid-js";
 import { Phase, getSetMetrics } from "../../services/workout/util";
@@ -38,7 +38,7 @@ export default function AnalyzeSet() {
   return (
     <div class="flex flex-col p-4 h-full">
       <div class="mb-4">
-        <div class="text-xl font-medium">{set()?.exercise_id}</div>
+        <A href={`/exercise/${set()?.exercise_id}`} class="text-xl font-medium block">{set()?.exercise_id}</A>
         <span class="text-gray-200">{(new Date(set()?.time)).toDateString()} <span class="text-gray-400">{(new Date(set()?.time)).toLocaleTimeString()}</span></span>
       </div>
       <div class="flex justify-between mb-4">
