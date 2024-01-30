@@ -110,17 +110,16 @@ export const WORKOUT_MODE_CONFIGS: WorkoutModeConfigs = {
   [WORKOUT_MODE.ISOKINETIC]: {
     name: "Isokinetic",
     description: "Constant Velocity",
-    getActivationConfig({ weight, spotterVelocity }) {
-      const e1rm = weight;
+    getActivationConfig({ spotterVelocity }) {
       return {
-        forces: getForces(weight, {
+        forces: getForces(MAX_WEIGHT, {
           concentric: {
-            decrease: { minMmS: 0, maxMmS: spotterVelocity - 1, ramp: e1rm * 0.4 },
-            increase: { minMmS: spotterVelocity + 1, maxMmS: spotterVelocity + 400, ramp: e1rm },
+            decrease: { minMmS: spotterVelocity - 400, maxMmS: spotterVelocity - 1, ramp: 50 },
+            increase: { minMmS: spotterVelocity + 1, maxMmS: spotterVelocity + 50, ramp: 50 },
           },
           eccentric: {
-            decrease: { minMmS: -spotterVelocity - 400, maxMmS: -spotterVelocity - 1, ramp: e1rm },
-            increase: { minMmS: -spotterVelocity + 1, maxMmS: 0, ramp: e1rm * 0.4 },
+            decrease: { minMmS: -spotterVelocity - 400, maxMmS: -spotterVelocity - 1, ramp: 0 },
+            increase: { minMmS: -spotterVelocity + 1, maxMmS: 0, ramp: 0 },
           },
         }),
       }
