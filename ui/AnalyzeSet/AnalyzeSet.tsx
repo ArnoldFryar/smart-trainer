@@ -23,6 +23,7 @@ const chartOptions = {
 export default function AnalyzeSet() {
   const params = useParams();
   const [currentTab, setCurrentTab] = createSignal("Weight");
+  const [currentGraph, setCurrentGraph] = createSignal("Reps");
   const [set] = createResource(() => {
     return getSet(params.setId);
   });
@@ -60,37 +61,17 @@ export default function AnalyzeSet() {
       </div>
       <div class="flex-grow bg-gray-800 p-4 rounded mb-4">
         <Tabs tabs={["ROM", "Weight", "Velocity", "Power"]} selected={currentTab()} onChange={setCurrentTab} />
+        <Tabs tabs={["Reps", "Cables"]} selected={currentGraph()} onChange={setCurrentGraph} />
         <Switch>
           <Match when={currentTab() === "ROM"}>
-            <Line 
-            data={{
-              labels: samples()?.map(() => ""),
-              datasets: [
-                {
-                  label: 'Left',
-                  data: samples()?.map((sample) => sample.left.position),
-                  borderColor: `hsl(${userHue}, 80%, 40%)`,
-                  backgroundColor: `hsl(${userHue}, 80%, 40%)`,
-                  borderWidth: 2,
-                  cubicInterpolationMode: 'monotone',
-                  pointStyle: false,
-                  yAxisID: 'y',
-                },
-                {
-                  label: 'Right',
-                  data: samples()?.map((sample) => sample.right.position),
-                  borderColor: `hsl(${userHue}, 70%, 70%)`,
-                  backgroundColor: `hsl(${userHue}, 70%, 70%)`,
-                  borderWidth: 2,
-                  cubicInterpolationMode: 'monotone',
-                  pointStyle: false,
-                  yAxisID: 'y',
-                },
-              ],
-            }} 
-            options={chartOptions} 
-            width={500} 
-            height={400} />
+            <Switch>
+              <Match when={currentGraph() === "Reps"}>
+                <RepGraph metrics={metrics()} map={({ position: { left, right }}) => (left.max + right.max - left.min - right.min) / 2}/>
+              </Match>
+              <Match when={currentGraph() === "Cables"}>
+                <CableSeries samples={samples()} map={(cable) => cable.position} />
+              </Match>
+            </Switch>
             <div class="grid grid-cols-3 mt-4">
               <Metric name="Max ROM">
                 {toIn(metrics().rom.maxDistance)}<span class="text-gray-300">in</span>
@@ -104,7 +85,14 @@ export default function AnalyzeSet() {
             </div>
           </Match>
           <Match when={currentTab() === "Weight"}>
-            <Bar data={getDatasets(metrics(), sample => sample.force.min * 2.2)} options={chartOptions} width={500} height={400} />
+            <Switch>
+              <Match when={currentGraph() === "Reps"}>
+                <RepGraph metrics={metrics()} map={(rep) => rep.force.min * 2.2}/>
+              </Match>
+              <Match when={currentGraph() === "Cables"}>
+                <CableSeries samples={samples()} map={(cable) => cable.force * 2.2} />
+              </Match>
+            </Switch>
             <div class="grid grid-cols-4 mt-4">
               <Metric name="Max Rep Weight">
                 {toLbs(metrics().concentric.maxMinForce)}<span class="text-gray-300">lbs</span>
@@ -121,7 +109,14 @@ export default function AnalyzeSet() {
             </div>
           </Match>
           <Match when={currentTab() === "Velocity"}>
-            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean)} options={chartOptions} width={500} height={400} />
+            <Switch>
+              <Match when={currentGraph() === "Reps"}>
+                <RepGraph metrics={metrics()} map={(rep) => rep.velocity.mean}/>
+              </Match>
+              <Match when={currentGraph() === "Cables"}>
+                <CableSeries samples={samples()} map={(cable) => cable.velocity} />
+              </Match>
+            </Switch>
             <div class="grid grid-cols-4 mt-4">
               <Metric name="Avg Velocity">
                 {toMeters(metrics().concentric.meanVelocity)}<span class="text-gray-300">m/s</span>
@@ -135,7 +130,14 @@ export default function AnalyzeSet() {
             </div>
           </Match>
           <Match when={currentTab() === "Power"}>
-            <Bar data={getDatasets(metrics(), sample => sample.velocity.mean / 1000 * sample.force.mean * 9.81)} options={chartOptions} width={500} height={400} />
+          <Switch>
+              <Match when={currentGraph() === "Reps"}>
+                <RepGraph metrics={metrics()} map={(rep) => rep.velocity.mean / 1000 * rep.force.mean * 9.81}/>
+              </Match>
+              <Match when={currentGraph() === "Cables"}>
+                <CableSeries samples={samples()} map={(cable) => cable.velocity / 1000 * cable.force * 9.81} />
+              </Match>
+            </Switch>
             <div class="grid grid-cols-4 mt-4">
               <Metric name="Avg Power">
                 {metrics().concentric.meanPower?.toFixed(1)}<span class="text-gray-300">W</span>
@@ -163,22 +165,13 @@ export default function AnalyzeSet() {
   );
 }
 
-function Metric(props) {
-  return (
-    <div>
-      <span class="text-xs block text-gray-400">{props.name}</span>
-      <span>{props.children}</span>
-    </div>
-  )
-}
-
-function getDatasets(metrics: ReturnType<typeof getSetMetrics>, fn: (sample: Phase) => number) {
-  return {
-    labels: metrics.concentric.samples.map((_, i) => i + 1),
+function RepGraph(props) {
+  return <Bar data={{
+    labels: props.metrics.concentric.samples.map((_, i) => i + 1),
     datasets: [
       {
         label: 'Combined',
-        data: metrics.concentric.samples.map(fn),
+        data: props.metrics.concentric.samples.map(props.map),
         borderColor: `hsl(${userHue}, 80%, 40%)`,
         backgroundColor: `hsl(${userHue}, 80%, 40%)`,
         borderWidth: 2,
@@ -187,7 +180,49 @@ function getDatasets(metrics: ReturnType<typeof getSetMetrics>, fn: (sample: Pha
         yAxisID: 'y',
       }
     ],
-  }
+  }} options={chartOptions} width={500} height={400} />
+}
+
+function CableSeries(props) {
+  const samples = () => props.samples;
+  return <Line 
+  data={{
+    labels: samples()?.map(() => ""),
+    datasets: [
+      {
+        label: 'Left',
+        data: samples()?.map((sample) => props.map(sample.left)),
+        borderColor: `hsl(${userHue}, 80%, 40%)`,
+        backgroundColor: `hsl(${userHue}, 80%, 40%)`,
+        borderWidth: 2,
+        cubicInterpolationMode: 'monotone',
+        pointStyle: false,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Right',
+        data: samples()?.map((sample) => props.map(sample.right)),
+        borderColor: `hsl(${userHue}, 70%, 70%)`,
+        backgroundColor: `hsl(${userHue}, 70%, 70%)`,
+        borderWidth: 2,
+        cubicInterpolationMode: 'monotone',
+        pointStyle: false,
+        yAxisID: 'y',
+      },
+    ],
+  }} 
+  options={chartOptions} 
+  width={500} 
+  height={400} />
+}
+
+function Metric(props) {
+  return (
+    <div>
+      <span class="text-xs block text-gray-400">{props.name}</span>
+      <span>{props.children}</span>
+    </div>
+  )
 }
 
 function Tabs(props) {
