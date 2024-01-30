@@ -61,13 +61,13 @@ export function splitSamplesByPhase(samples: Sample[], { top, bottom }: Range): 
     }
   }
 
-  phases ??= [];
-
-  const rangeOfMotion = top - bottom;
-  let currentPhase = phases[phases.length - 1] ?? {
+  phases ??= [{
     phase: getRelevantCable(samples[0]).velocity > 0 ? "concentric" : "eccentric",
     samples: []
-  };
+  } as Phase];
+
+  const rangeOfMotion = top - bottom;
+  let currentPhase = phases[phases.length - 1];
 
   for (let i = foundIndex + 1; i < samples.length; i++) {
     const sample = samples[i];
@@ -93,6 +93,7 @@ export function splitSamplesByPhase(samples: Sample[], { top, bottom }: Range): 
           samples: [sample]
         } as Phase);
       } else {
+        if (!currentPhase.samples[0]) debugger;
         const initialCable = getRelevantCable(currentPhase.samples[0]);
         const initialRelativePosition = (initialCable.position - bottom) / rangeOfMotion;
         if (Math.abs(relativePosition - initialRelativePosition) > 0.75) {
@@ -254,7 +255,7 @@ export function getSetMetrics(samples: Sample[], range: Range) {
 
 const eccentricRatio = 1.4;
 function getCombinedWeights(concentric: Phase[], eccentric: Phase[]): number[] {
-  return concentric.map((p, i) => Math.max(p.force.min, eccentric[i].force.min / eccentricRatio));
+  return concentric.map((p, i) => Math.max(p.force.min, eccentric[i]?.force.min / eccentricRatio || 0));
 }
 
 function getEstimated1RepMax(weights: number[]) {
