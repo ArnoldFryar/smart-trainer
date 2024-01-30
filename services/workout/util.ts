@@ -305,6 +305,26 @@ export function groupSetsByDate(sets) {
   }, {});
 }
 
+export function groupSetsByWeek(sets) {
+  return (sets??[]).reduce((groups, set) => {
+    const key = getWeekKey(set.time);
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(set);
+    return groups;
+  }, {});
+}
+
+export function getWeekKey(dateMs) {
+  const date = new Date(dateMs);
+  const year = date.getFullYear();
+  const firstOfYear = new Date(year, 0, 1);
+  const dayOfYear = Math.floor((+date - +firstOfYear) / (24 * 60 * 60 * 1000));
+  const weekOfYear = Math.ceil(dayOfYear / 7);
+  return `${year}-${weekOfYear}`;
+}
+
 function estimate1RepMaxLombardi(weight: number, reps: number) {
   return weight * Math.pow(reps, 0.1);
 }

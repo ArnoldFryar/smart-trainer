@@ -58,17 +58,7 @@ interface UserSetting extends PouchDBBaseDocument {
   value: unknown;
 }
 
-interface PersonalBest extends PouchDBBaseDocument {
-  type: "PERSONAL_BEST",
-  user_id: string;
-  exercise_id: string;
-  set_id: string;
-  key: string;
-  value: number;
-  time: number;
-}
-
-type Schema = Workout | WorkoutSet | User | UserSetting | PersonalBest;
+type Schema = Workout | WorkoutSet | User | UserSetting;
 type PartialSchema<T extends Schema> = Omit<T, "_id" | "type"> & { _id?: string };
 
 export const db = new PouchDB<Schema>("smartfitness", { auto_compaction: true });
@@ -165,66 +155,6 @@ export async function saveSet(set: PartialSchema<WorkoutSet>) {
   return upsert("WORKOUT_SET", set);
 }
 
-export async function getLatestExercisePBs(user_id: string, exercise_id: string) {
-  const allExercisePBHistory = (await db.find({
-    selector: {
-      type: "PERSONAL_BEST",
-      user_id,
-      exercise_id
-    },
-    sort: [{ time: "desc" }]
-  })).docs as PersonalBest[];
-
-  const latestPBs = allExercisePBHistory.reduce((latestPBs, pb) => {
-    if (!latestPBs[pb.key]) {
-      latestPBs[pb.key] = pb;
-    }
-    return latestPBs;
-  }, {} as Record<string, PersonalBest>);
-
-  return latestPBs;
-}
-
-export async function getExercisePBHistory(user_id: string, exercise_id: string, key: string) {
-  return (await db.find({
-    selector: {
-      type: "PERSONAL_BEST",
-      user_id,
-      exercise_id,
-      key
-    },
-    sort: [{ time: "desc" }]
-  })).docs as PersonalBest[];
-}
-
-export async function getLatestExercisePB(user_id: string, exercise_id: string, key: string) {
-  return (await db.find({
-    selector: {
-      type: "PERSONAL_BEST",
-      user_id,
-      exercise_id,
-      key
-    },
-    sort: [{ time: "desc" }],
-    limit: 1
-  })).docs[0] as PersonalBest;
-}
-
-export async function getLatestPB(user_id: string) {
-  return (await db.find({
-    selector: {
-      type: "PERSONAL_BEST",
-      user_id
-    },
-    sort: [{ time: "desc" }],
-    limit: 1
-  })).docs[0] as PersonalBest;
-}
-
-export async function savePB(pb: PartialSchema<PersonalBest>) {
-  return upsert("PERSONAL_BEST", pb);
-}
-
 export async function getEstimated1RepMax(user_id: string, exercise_id: string, time: number = Date.now()) {
   const bestSets = (await db.find({
     selector: {
@@ -280,6 +210,20 @@ export async function getAllRepMaxes(user_id: string, exercise_id: string) {
     bestSets.push(getActualRepMax(user_id, exercise_id, reps));
   }
   return Promise.all(bestSets);
+}
+
+export async function getLatestSet(user_id: string) {
+  const latestSets = (await db.find({
+    selector: {
+      type: "WORKOUT_SET",
+      user_id,
+      time: { $gt: null },
+    },
+    sort: [{ time: "desc" }],
+    limit: 1
+  })).docs as WorkoutSet[];
+
+  return latestSets[0];
 }
 
 (window as any).db = db;

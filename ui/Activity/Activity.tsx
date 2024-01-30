@@ -1,9 +1,10 @@
 import { For, createResource } from 'solid-js';
 import { Button } from '../_common/Elements/Elements.js';
-import { getSets } from '../../services/db/settings.js';
-import { A, useNavigate } from '@solidjs/router';
+import { getSets, getSetSamples } from '../../services/db/settings.js';
+import { useNavigate } from '@solidjs/router';
 import SetHistory from './SetHistory/SetHistory.jsx';
-import { groupSetsByDate } from '../../services/workout/util.js';
+import { getWeekKey, groupSetsByDate, groupSetsByWeek } from '../../services/workout/util.js';
+import { StreakAndMileStones } from './StreakAndMileStones/StreakAndMileStones.jsx';
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -25,9 +26,31 @@ export default function Activity() {
     }
     return pastWeek.reverse();
   }
+  const weekStreak = () => {
+    let time = Date.now();
+    let weeks = 0;
+    const setsByWeek = groupSetsByWeek(sets());
+    while (true) {
+      if (!setsByWeek[getWeekKey(time)]) {
+        // we don't count the current week against you if you haven't worked out yet
+        if (getWeekKey(time) !== getWeekKey(Date.now())) break;
+      } else {
+        weeks++;
+      }
+      time -= 1000 * 60 * 60 * 24 * 7;
+    }
+    return weeks;
+  }
+  const kgsLifted = () => sets()?.reduce((total, set) => total + ((set.bestEffort.reps*set.bestEffort.weight) || 0), 0);
+  const activeDays = () => Object.keys(groupSetsByDate(sets())).length;
+  const lastSetTime = () => sets()?.[0]?.time;
   return (
     <div class="flex flex-col p-4 h-full">
       <div class="grow text-sm overflow-y-auto">
+        <StreakAndMileStones weeks={weekStreak()} weight={kgsLifted()*2.2} days={activeDays()} since={lastSetTime()}/>
+        <div class="py-4 text-xl font-medium">
+          Last 7 days
+        </div>
         <div class="flex justify-between content-between">
           <For each={pastWeek()}>
             {({ label, setCount }) => (

@@ -278,3 +278,10 @@ export function Slider(props) {
     </div>
   );
 }
+
+export function NumberWithUnit(props) {
+  return <span>
+    <span class="">{props.value}</span>
+    <span class="text-lg text-gray-400">{props.unit}</span>
+  </span>
+}
