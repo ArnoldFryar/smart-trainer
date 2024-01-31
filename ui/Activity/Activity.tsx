@@ -48,8 +48,11 @@ export default function Activity() {
     <div class="flex flex-col p-4 h-full">
       <div class="grow text-sm overflow-y-auto">
         <StreakAndMileStones weeks={weekStreak()} weight={kgsLifted()*2.2} days={activeDays()} since={lastSetTime()}/>
-        <div class="py-4 text-xl font-medium">
-          Last 7 days
+        <div class="inline-flex items-center justify-center w-full relative">
+            <hr class="w-64 h-px my-8 border-0 bg-gray-700"/>
+            <span class="absolute px-3 font-medium -translate-x-1/2 left-1/2 text-white bg-gray-900">
+              Last 7 days
+            </span>
         </div>
         <div class="flex justify-between content-between">
           <For each={pastWeek()}>

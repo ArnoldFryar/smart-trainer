@@ -4,33 +4,30 @@ import { Timer } from "../../_common/Timer/Timer";
 export function StreakAndMileStones(props) {
   return (
     <>
-    <div class="text-xl font-medium">
-      Keep it up <span class="underline underline-offset-2 decoration-primary-600 font-light">Michael</span>
-    </div>
     <div class="flex">
-      <div class="flex-1 text-center p-4">
+      <div class="flex-1 text-center py-2 bg-gray-800 mr-2 rounded">
         <div class="text-xl font-light">
           <FormatNumber number={props.weeks}/>
         </div>
-        <div class="text-xs text-gray-300">week streak</div>
+        <div class="text-xs text-gray-300">wk streak</div>
       </div>
-      <div class="flex-1 text-center p-4">
+      <div class="flex-1 text-center py-2 bg-gray-800 mx-2 rounded">
         <div class="text-xl font-light">
           <FormatNumber number={props.weight}/>
         </div>
         <div class="text-xs text-gray-300">lbs lifted</div>
       </div>
-      <div class="flex-1 text-center p-4">
+      <div class="flex-1 text-center py-2 bg-gray-800 mx-2 rounded">
         <div class="text-xl font-light">
           <FormatNumber number={props.days}/>
         </div>
         <div class="text-xs text-gray-300">days lifted</div>
       </div>
-      <div class="flex-1 text-center p-4">
+      <div class="flex-1 text-center py-2 bg-gray-800 ml-2 rounded">
         <div class="text-xl font-light">
           <Timer since={props.since}/>
         </div>
-        <div class="text-xs text-gray-300">rest</div>
+        <div class="text-xs text-gray-300">rest time</div>
       </div>
     </div>
     </>
