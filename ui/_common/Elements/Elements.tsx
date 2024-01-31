@@ -148,16 +148,19 @@ export function RadioGroup(props) {
 
   return (
     <FieldSet label={props.label} onChange={props.onChange}>
-      <div class="flex" ref={container}>
-        {props.children}
+      <div class="absolute h-16 w-full overflow-auto">
+        <div class="flex" ref={container}>
+          {props.children}
+        </div>
       </div>
+      <div class="h-16"/>
     </FieldSet>
   );
 }
 
 export function FieldSet(props) {
   return (
-    <fieldset class="my-4" onChange={props.onChange}>
+    <fieldset class="my-4 relative" onChange={props.onChange}>
       <legend class="text-white font-light text-sm mb-1">{props.label} <span class="text-gray-400" style="font-size:0.8em;">{props.subtext}</span></legend>
       {props.children}
     </fieldset>
