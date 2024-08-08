@@ -244,8 +244,8 @@ export function Slider(props) {
           top-2/4
           cursor-pointer
           [&::-webkit-slider-thumb]:appearance-none
-          [&::-webkit-slider-thumb]:w-12
-          [&::-webkit-slider-thumb]:h-12
+          [&::-webkit-slider-thumb]:w-8
+          [&::-webkit-slider-thumb]:h-8
           [&::-webkit-slider-thumb]:cursor-ew-resize
           [&::-webkit-slider-thumb]:opacity-0
           [&::-webkit-slider-thumb]:rounded-full

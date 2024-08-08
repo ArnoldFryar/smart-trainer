@@ -12,7 +12,7 @@ const MOVEMENT = {
   HORIZONTAL_PUSH: "HORIZONTAL_PUSH",
   LEGS_SQUAT: "LEGS_SQUAT",
   LEGS_HINGE: "LEGS_HINGE",
-}
+};
 
 const BACK_SQUAT_WR = 490;
 // https://symmetricstrength.com/standards#/75/kg/male/-
@@ -22,7 +22,8 @@ const BENCH_SQUAT_RATIO = 0.75;
 // https://strengthlevel.com/
 const BACK_SQUAT_SL = 219.2;
 const BACK_SQUAT_SL_INT_RATIO = 1.5;
-const avg = (...args: number[]) => args.reduce((a, b) => a + b, 0) / args.length;
+const avg = (...args: number[]) =>
+  args.reduce((a, b) => a + b, 0) / args.length;
 
 export type Exercise = {
   id: string;
@@ -57,7 +58,7 @@ export const EXERCISES: Record<string, Exercise> = {
       365 / BACK_SQUAT_WR, // 0.744
       181 / BACK_SQUAT_SS, // 0.747
       168.8 / BACK_SQUAT_SL, // 0.770
-      BENCH_SQUAT_RATIO, // 0.750
+      BENCH_SQUAT_RATIO // 0.750
     ),
     equipment: [EQUIPMENT.BAR, EQUIPMENT.BENCH],
     mvt: 0.15,
@@ -68,7 +69,7 @@ export const EXERCISES: Record<string, Exercise> = {
     ratio: avg(
       148 / BACK_SQUAT_SS, // 0.611
       149 / BACK_SQUAT_SL, // 0.679
-      0.8 * BENCH_SQUAT_RATIO, // 0.600
+      0.8 * BENCH_SQUAT_RATIO // 0.600
     ),
     mvt: 0.2, // TODO: check
     equipment: [EQUIPMENT.BAR, EQUIPMENT.BENCH],
@@ -77,7 +78,7 @@ export const EXERCISES: Record<string, Exercise> = {
   DB_CHEST_PRESS: {
     id: "DB_CHEST_PRESS",
     ratio: avg(
-      156 / BACK_SQUAT_SL, // 0.711
+      156 / BACK_SQUAT_SL // 0.711
     ),
     equipment: [EQUIPMENT.HANDLES, EQUIPMENT.BENCH],
     mvt: 0.15,
@@ -88,7 +89,7 @@ export const EXERCISES: Record<string, Exercise> = {
     ratio: avg(
       148 / BACK_SQUAT_SS, // 0.611
       146 / BACK_SQUAT_SL, // 0.667
-      0.7 * BENCH_SQUAT_RATIO, // 0.525
+      0.7 * BENCH_SQUAT_RATIO // 0.525
     ),
     equipment: EQUIPMENT.BAR,
     mvt: 0.4,
@@ -99,7 +100,7 @@ export const EXERCISES: Record<string, Exercise> = {
     ratio: avg(
       148 / BACK_SQUAT_SS, // 0.611
       146 / BACK_SQUAT_SL, // 0.667
-      0.7 * BENCH_SQUAT_RATIO, // 0.525
+      0.7 * BENCH_SQUAT_RATIO // 0.525
     ),
     equipment: EQUIPMENT.HANDLES,
     mvt: 0.4,
@@ -130,7 +131,7 @@ export const EXERCISES: Record<string, Exercise> = {
       212.5 / BACK_SQUAT_WR, // 0.433
       118 / BACK_SQUAT_SS, // 0.488
       112.3 / BACK_SQUAT_SL, // 0.511
-      0.6 * BENCH_SQUAT_RATIO, // 0.450
+      0.6 * BENCH_SQUAT_RATIO // 0.450
     ),
     mvt: 0.2,
     equipment: EQUIPMENT.BAR,
@@ -140,7 +141,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: "DB_SHOULDER_PRESS",
     ratio: avg(
       120 / BACK_SQUAT_SL, // 0.547
-      0.6 * BENCH_SQUAT_RATIO, // 0.450
+      0.6 * BENCH_SQUAT_RATIO // 0.450
     ),
     mvt: 0.2,
     equipment: EQUIPMENT.HANDLES,
@@ -148,18 +149,14 @@ export const EXERCISES: Record<string, Exercise> = {
   },
   DB_UPRIGHT_ROW: {
     id: "DB_UPRIGHT_ROW",
-    ratio: avg(
-      2 * 0.35 / BACK_SQUAT_SL_INT_RATIO,
-    ),
+    ratio: avg((2 * 0.35) / BACK_SQUAT_SL_INT_RATIO),
     mvt: 0.4,
     equipment: EQUIPMENT.HANDLES,
     movement: MOVEMENT.VERTICAL_PULL,
   },
   DB_GOBLET_SQUAT: {
     id: "DB_GOBLET_SQUAT",
-    ratio: avg(
-      0.40,
-    ),
+    ratio: avg(0.4),
     mvt: 0.4,
     equipment: EQUIPMENT.HANDLES,
     movement: MOVEMENT.LEGS_SQUAT,
@@ -169,7 +166,7 @@ export const EXERCISES: Record<string, Exercise> = {
     ratio: avg(
       156 / BACK_SQUAT_SS, // 0.644
       145 / BACK_SQUAT_SL, // 0.660
-      0.85 * BENCH_SQUAT_RATIO, // 0.638
+      0.85 * BENCH_SQUAT_RATIO // 0.638
     ),
     mvt: 0.3, // TODO: check
     equipment: EQUIPMENT.BAR,
@@ -186,12 +183,12 @@ export const EXERCISES: Record<string, Exercise> = {
     ratio: avg(
       114 / BACK_SQUAT_WR, // 0.232
       91 / BACK_SQUAT_SL, // 0.413
-      0.4 * BENCH_SQUAT_RATIO, // 0.300
+      0.4 * BENCH_SQUAT_RATIO // 0.300
     ),
     mvt: 0.15, // TODO: check
     equipment: EQUIPMENT.HANDLES,
   },
-  OVERHEAD_TRICEP_EXTENSION: {
+  OH_TRICEP_EXT: {
     id: "OVERHEAD_TRICEP_EXTENSION",
     ratio: 96.9 / BACK_SQUAT_SL, // 0.44
     mvt: 0.15, // TODO: check
@@ -199,7 +196,7 @@ export const EXERCISES: Record<string, Exercise> = {
   },
   LATERAL_RAISE: {
     id: "LATERAL_RAISE",
-    ratio: 2 * 35.6 / BACK_SQUAT_SL, // 0.16
+    ratio: (2 * 35.6) / BACK_SQUAT_SL, // 0.16
     mvt: 0.25, // TODO: check
     equipment: EQUIPMENT.HANDLES,
   },
@@ -211,7 +208,7 @@ export const EXERCISES: Record<string, Exercise> = {
   },
   CHEST_FLY: {
     id: "CHEST_FLY",
-    ratio: 2 * 52.3 / BACK_SQUAT_SL, // 0.24
+    ratio: (2 * 52.3) / BACK_SQUAT_SL, // 0.24
     mvt: 0.25, // TODO: check
     equipment: EQUIPMENT.HANDLES,
   },
@@ -221,10 +218,18 @@ export const EXERCISES: Record<string, Exercise> = {
     mvt: 0.25, // TODO: check
     equipment: EQUIPMENT.BAR,
   },
-}
+};
 
-
-export const PUSH_EXERCISES = [EXERCISES.FLAT_BENCH_PRESS, EXERCISES.OVERHEAD_PRESS];
-export const PULL_EXERCISES = [EXERCISES.BARBELL_ROW/*, EXERCISES.HIGH_PULL*/];
+export const PUSH_EXERCISES = [
+  EXERCISES.FLAT_BENCH_PRESS,
+  EXERCISES.OVERHEAD_PRESS,
+];
+export const PULL_EXERCISES = [EXERCISES.BARBELL_ROW /*, EXERCISES.HIGH_PULL*/];
 export const LEG_EXERCISES = [EXERCISES.BACK_SQUAT, EXERCISES.DEADLIFT];
-export const ACCESSORY_EXERCISES = [EXERCISES.BICEP_CURL, EXERCISES.OVERHEAD_TRICEP_EXTENSION, EXERCISES.LATERAL_RAISE, EXERCISES.REAR_FLY, EXERCISES.CHEST_FLY];
+export const ACCESSORY_EXERCISES = [
+  EXERCISES.BICEP_CURL,
+  EXERCISES.OVERHEAD_TRICEP_EXTENSION,
+  EXERCISES.LATERAL_RAISE,
+  EXERCISES.REAR_FLY,
+  EXERCISES.CHEST_FLY,
+];

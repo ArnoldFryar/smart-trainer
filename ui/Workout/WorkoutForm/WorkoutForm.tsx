@@ -13,9 +13,16 @@ import { DEFAULT_USERS, WorkoutConfig } from "../../../services/workout/index.js
 import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
 import { getNestedFormData } from "../../../services/util/form.js";
 import { getEstimated1RepMax } from "../../../services/db/settings.js";
+
+export type SetConfigCache = { 
+  [exercise: keyof typeof EXERCISES]: { 
+    [mode: string]: WorkoutConfig["sets"][number] 
+  }
+};
 export namespace WorkoutForm {
   export interface Props {
     config: WorkoutConfig;
+    cache: SetConfigCache;
     connected: boolean;
     onSubmit: (workoutOptions: any) => void;
   }
@@ -32,7 +39,7 @@ export function WorkoutForm(props: WorkoutForm.Props) {
   return (
     <form onSubmit={activate} class="p-4">
       <UserSelect value={props.config.users}/>
-      <Sets value={props.config.sets} name="sets"/>
+      <Sets value={props.config.sets} name="sets" cache={props.cache}/>
       <Button type="submit" primary>{props.connected ? "Workout!" : "Connect"}</Button>
     </form>
   );
@@ -109,7 +116,7 @@ const DEFAULT_SET = {
 function Sets(props) {
   let button!: HTMLButtonElement;
   const [sets, setSets] = createSignal(props.value || [DEFAULT_SET]);
-  const [openIndex, setOpenIndex] = createSignal(sets().length === 1 ? 0 : -1);
+  const [openIndex, setOpenIndex] = createSignal(-1);
   const copyLast = (e) => {
     e.preventDefault();
     const formData = getNestedFormData((e.target as HTMLButtonElement).form);
@@ -118,7 +125,7 @@ function Sets(props) {
       ...currentSets,
       currentSets[currentSets.length - 1] || DEFAULT_SET
     ]);
-    setOpenIndex(currentSets.length);
+    // setOpenIndex(currentSets.length);
   }
   const copyAll = (e) => {
     e.preventDefault();
@@ -159,8 +166,9 @@ function Sets(props) {
           <Set 
             name={`${props.name}.${i()}`} 
             value={set} 
+            cache={props.cache}
             open={i() === openIndex()} 
-            onOpen={() => setOpenIndex(i())} 
+            onOpen={(o) => setOpenIndex(o ? i() : -1)} 
             onChange={updateSets} 
             canRemove={canRemove()}
             onRemove={() => removeSet(i())}
@@ -180,6 +188,7 @@ function createInputSignal<T extends () => number>(syncedValue: T) {
 }
 
 function Set(props) {
+  const [value, setValue] = createSignal(props.value);
   const [weight, setWeight, onWeightInput] = createInputSignal(() => props.value.weight);
   const [maxWeight, setMaxWeight, onMaxWeightInput] = createInputSignal(() => props.value.maxWeight);
 
@@ -190,66 +199,121 @@ function Set(props) {
 
   // TODO: on excerise change, select an appropriate weight 
   // relative to the weight for the previous exercise
-  createEffect((prev: number | undefined) => {
-    if (prev) {
-      const ratio = e1rm() / prev;
-      untrack(() => {
-        setWeight(weight() * ratio);
-        setMaxWeight(maxWeight() * ratio);
-      })
-    }
-    return e1rm() ?? prev;
-  })
+  // createEffect((prev: number | undefined) => {
+  //   if (prev) {
+  //     const ratio = e1rm() / prev;
+  //     untrack(() => {
+  //       setWeight(weight() * ratio);
+  //       setMaxWeight(maxWeight() * ratio);
+  //     })
+  //   }
+  //   return e1rm() ?? prev;
+  // })
 
   const onOpen = (e) => {
-    if (e.currentTarget.open) {
-      props.onOpen();
-    }
+    props.onOpen(e.currentTarget.open);
   }
   const onRemove = (e) => {
     e.preventDefault();
     e.stopPropagation();
     props.onRemove?.();
   }
+  const applyCachedExercise = (e) => {
+    const exercise = e.target.value;
+    const cachedSet = props.cache[exercise]?.[value().mode];
+    if (cachedSet) {
+      batch(() => {
+        setValue(cachedSet);
+        setWeight(cachedSet.weight);
+        setMaxWeight(cachedSet.maxWeight);
+      });
+    }
+  }
+  const applyCachedMode = (e) => {
+    const mode = e.target.value;
+    const cachedSet = props.cache[value().exercise]?.[mode];
+    if (cachedSet) {
+      batch(() => {
+        setValue(cachedSet);
+        setWeight(cachedSet.weight);
+        setMaxWeight(cachedSet.maxWeight);
+      });
+    }
+  }
 
   return (
     <details open={props.open} onToggle={onOpen} class="mb-2" onChange={props.onChange}>
-      <summary class="p-2 text-gray-400 bg-gray-800 rounded">
-        <span class="text-white inline-block ml-1">
-          {props.value.exercise}
-          <span class="block text-xs text-gray-400">
-            {WORKOUT_MODE_CONFIGS[props.value.mode]?.name}
-            <Show when={props.value.reps}>
-              &nbsp;&bull; {props.value.reps}reps
+      <summary class="flex justify-center items-center p-2 text-gray-400 bg-gray-800 rounded">
+        <span class="text-white flex-1 ml-1">
+          <span class="flex">
+            <Select name={`${props.name}.exercise`} class="flex-1 w-0 bg-gray-700" onChange={applyCachedExercise}>
+              <For each={EXERCISE_KEYS}>
+                {(key) => (
+                  <option selected={key === value().exercise}>
+                    {key}
+                  </option>
+                )}
+              </For>
+            </Select>
+            <Select name={`${props.name}.mode`} class="flex-1 w-0 bg-gray-700 ml-1" onChange={applyCachedMode}>
+              <For each={ACTIVE_WORKOUT_MODES}>
+                {(mode) => (
+                  <option selected={mode === value().mode}>
+                    {mode}  
+                  </option>
+                )}
+              </For>
+            </Select>
+            <Show when={props.canRemove}>
+              <Button class="ml-2" onClick={onRemove}>✕</Button>
             </Show>
-            <Show when={props.value.forcedReps}>
-            &nbsp;&bull; {props.value.forcedReps}fr
+          </span>
+          <span class="block text-xs text-gray-400 mt-2">
+          <span class="font-mono mr-2">{props.open ? "▼" : "▶"}</span>
+            {/*WORKOUT_MODE_CONFIGS[value().mode]?.name*/}
+            {weight() + (maxWeight() && maxWeight() !== weight() ? `→${maxWeight()}` : "")}lbs 
+            <Show when={e1rm()}>
+              ({(100*weight()/e1rm()).toFixed(1)}%)
             </Show>
-            <Show when={props.value.rir}>
-            &nbsp;&bull; {props.value.rir}rir
+            <Show when={value().reps}>
+              &nbsp;&bull; {value().reps}reps
             </Show>
-            <Show when={props.value.spotterVelocity}>
-            &nbsp;&bull; {props.value.spotterVelocity}m/s
+            <Show when={value().forcedReps}>
+            &nbsp;&bull; {value().forcedReps}fr
+            </Show>
+            <Show when={value().rir}>
+            &nbsp;&bull; {value().rir}rir
+            </Show>
+            <Show when={value().spotterVelocity}>
+            &nbsp;&bull; {value().spotterVelocity}m/s
             </Show>
           </span>
         </span>
-        <Show when={props.canRemove}>
-          <Button class="float-right" onClick={onRemove}>✕</Button>
-        </Show>
       </summary>
       <div class="border border-gray-800 px-2 -mt-2">
-        <FieldSet label="Exercise">
-          <Select name={`${props.name}.exercise`} class="mr-2">
+        {/* <FieldSet label="Exercise">
+          <Select name={`${props.name}.exercise`} class="mr-2" onChange={applyCachedExercise}>
             <For each={EXERCISE_KEYS}>
               {(key) => (
-                <option selected={key === props.value.exercise}>
+                <option selected={key === value().exercise}>
                   {key}
                 </option>
               )}
             </For>
           </Select>
         </FieldSet>
-        <RadioGroup label="Workout Mode" checkedValue={props.value.mode}>
+        <FieldSet label="Workout Mode">
+          <Select name={`${props.name}.exercise`} class="mr-2" onChange={applyCachedExercise}>
+            <For each={ACTIVE_WORKOUT_MODES}>
+              {(mode) => (
+                <option selected={mode === value().mode}>
+                  {mode}
+                </option>
+              )}
+            </For>
+          </Select>
+        </FieldSet> */}
+        {/* <RadioGroup label="Workout Mode" checkedValue={value().mode} onChange={applyCachedMode}>
           <For each={ACTIVE_WORKOUT_MODES}>
             {(mode) => (
               <Radio name={`${props.name}.mode`} value={mode}>
@@ -257,26 +321,26 @@ function Set(props) {
               </Radio>
             )}
           </For>
-        </RadioGroup>
+        </RadioGroup> */}
         <FieldSet 
-          label={`${props.value.mode === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"}`} 
+          label={`${value().mode === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"}`} 
           subtext={`(${(100*weight()/e1rm()).toFixed(1)}% e1RM)`}>
           <Slider name={`${props.name}.weight`} value={weight() ?? 40} max={440} min={1} unit="lbs" onInput={onWeightInput}/>
         </FieldSet>
-        <Show when={props.value.mode === WORKOUT_MODE.PROGRESSION}>
+        <Show when={value().mode === WORKOUT_MODE.PROGRESSION}>
           <FieldSet label="Maximum Weight" subtext={`(${(100*maxWeight()/e1rm()).toFixed(1)}% e1RM)`}>
             {/* TODO: show ± percentage of e1RM */}
             <Slider name={`${props.name}.maxWeight`} value={Math.max(maxWeight(), weight()) ?? 40} max={440} min={1} unit="lbs" onInput={onMaxWeightInput}/>
           </FieldSet>
           <FieldSet label="Incremental Steps">
-            <Slider name={`${props.name}.progressionReps`} value={props.value.progressionReps ?? 3} max={10} min={1} unit="reps"/>
+            <Slider name={`${props.name}.progressionReps`} value={value().progressionReps ?? 3} max={10} min={1} unit="reps"/>
           </FieldSet>
         </Show>
         <FieldSet label="Spotter Velocity" subtext="X% MVT">
           {/* TODO: show percentage of eMVT */}
-          <Slider name={`${props.name}.spotterVelocity`} value={props.value.spotterVelocity ?? 0.25} max={0.5} min={0} step={0.01} unit="m/s"/>
+          <Slider name={`${props.name}.spotterVelocity`} value={value().spotterVelocity ?? 0.25} max={0.5} min={0} step={0.01} unit="m/s"/>
         </FieldSet>
-        <RadioGroup label="Workout Limit" checkedValue={props.value.limit}>
+        <RadioGroup label="Workout Limit" checkedValue={value().limit}>
           <For each={Object.keys(WORKOUT_LIMIT)}>
             {(limit) => (
               <Radio name={`${props.name}.limit`} value={limit}>
@@ -286,24 +350,24 @@ function Set(props) {
           </For>
         </RadioGroup>
         {/* TODO: show estimated RPE */}
-        <Show when={props.value.limit === WORKOUT_LIMIT.REPS}>
+        <Show when={value().limit === WORKOUT_LIMIT.REPS}>
           <FieldSet label="Reps">
-            <Slider name={`${props.name}.reps`} value={props.value.reps ?? 10} max={30} min={1} unit="reps"/>
+            <Slider name={`${props.name}.reps`} value={value().reps ?? 10} max={30} min={1} unit="reps"/>
           </FieldSet>
         </Show>
-        <Show when={props.value.limit === WORKOUT_LIMIT.TIME}>
+        <Show when={value().limit === WORKOUT_LIMIT.TIME}>
           <FieldSet label="Time">
-            <Slider name={`${props.name}.time`} value={props.value.time ?? 30} max={120} min={10} step={10} unit="sec"/>
+            <Slider name={`${props.name}.time`} value={value().time ?? 30} max={120} min={10} step={10} unit="sec"/>
           </FieldSet>
         </Show>
-        <Show when={props.value.limit === WORKOUT_LIMIT.FORCED_REPS}>
+        <Show when={value().limit === WORKOUT_LIMIT.FORCED_REPS}>
           <FieldSet label="Forced Reps">
-            <Slider name={`${props.name}.forcedReps`} value={props.value.forcedReps ?? 3} max={10} min={1} unit="reps"/>
+            <Slider name={`${props.name}.forcedReps`} value={value().forcedReps ?? 3} max={10} min={1} unit="reps"/>
           </FieldSet>
         </Show>
-        <Show when={props.value.limit === WORKOUT_LIMIT.VELOCITY_LOSS}>
+        <Show when={value().limit === WORKOUT_LIMIT.VELOCITY_LOSS}>
           <FieldSet label="Velocity Loss">
-            <Slider name={`${props.name}.velocityLoss`} value={props.value.spotterVelocity ?? 40} max={80} min={10} step={5} unit="%"/>
+            <Slider name={`${props.name}.velocityLoss`} value={value().spotterVelocity ?? 40} max={80} min={10} step={5} unit="%"/>
           </FieldSet>
         </Show>
       </div>
