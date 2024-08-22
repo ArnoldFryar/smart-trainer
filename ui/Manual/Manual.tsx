@@ -1,12 +1,11 @@
 import { createSignal, For, onCleanup, Show } from 'solid-js';
 import { getNestedFormData } from '../../services/util/form.js';
 import { createLocalSignal } from '../../services/util/signals.js';
-import { PRESETS } from '../../services/device/activate.js';
+import { PRESETS, getRegularCommand, getEchoCommand } from '../../services/device/activate.js';
 import { Button } from '../_common/Elements/Elements.jsx';
 import { WeightAndRangeOfMotion } from '../Workout/WeightAndRangeOfMotion/WeightAndRangeOfMotion.jsx';
-import { Reps } from '../Workout/WorkoutActive/WorkoutActive.jsx';
 
-const DEFAULT_CONFIG = {
+const DEFAULT_ACTIVATE_CONFIG = {
   reps: {
     repCounts: {
       total: 13,
@@ -61,32 +60,110 @@ const DEFAULT_CONFIG = {
   }
 }
 
+const DEFAULT_REGULAR_CONFIG = {
+  romRepCount: 3,
+  repCount: 10,
+  mode: {
+    spotter: 0,
+    concentric: 10,
+    eccentric: 10,
+    progression: 0,
+    curve: {
+      linearC1: 0,
+      squareC2: 0,
+    },
+  },
+};
+
+const DEFAULT_ECHO_CONFIG = {
+  romRepCount: 3,
+  repCount: 10,
+  mode: {
+    spotter: 0,
+    eccentricOverload: 0,
+    referenceMapBlend: 0,
+    concentricDelayS: 0.0,
+    concentric:{
+      duration: 3,
+      maxVelocity: 55,
+    },
+    eccentric: {
+      duration: 0,
+      maxVelocity: -200,
+    }
+  },
+}
+  
+
 export default function Manual() {
-  const [savedActivateConfig, setSavedActivateConfig] = createLocalSignal("manual-activate-config", DEFAULT_CONFIG);
+  const [command, setCommand] = createLocalSignal("manual-command", "Activate");
+  const [savedActivateConfig, setSavedActivateConfig] = createLocalSignal("manual-activate-config", DEFAULT_ACTIVATE_CONFIG);
+  const [savedRegularConfig, setSavedRegularConfig] = createLocalSignal("manual-regular-config", DEFAULT_REGULAR_CONFIG);
+  const [savedEchoConfig, setSavedEchoConfig] = createLocalSignal("manual-echo-config", DEFAULT_ECHO_CONFIG);
   const [activateConfig, setActivateConfig] = createSignal(savedActivateConfig());
-  const weight = () => activateConfig().activationForce.softMax * 2;
-  const setWeight = (weight) => setActivateConfig({
-    ...activateConfig(),
-    activationForce: {
-      ...activateConfig().activationForce,
-      forces: {
-        ...activateConfig().activationForce.forces,
-        max: weight/2 + 10,
-      },
-      softMax: weight/2,
+  const [regularConfig, setRegularConfig] = createSignal(savedRegularConfig());
+  const [echoConfig, setEchoConfig] = createSignal(savedEchoConfig());
+  const weight = () => {
+    if (command() === "Activate") {
+      return activateConfig().activationForce.softMax * 2;
+    } else if (command() === "Regular") {
+      return regularConfig().mode.concentric * 2;
+    } else if (command() === "Echo") {
+      return "NaN";
     }
-  });
-  const reps = () => activateConfig().reps.repCounts.total - activateConfig().reps.repCounts.baseline;
-  const setReps = (reps) => setActivateConfig({
-    ...activateConfig(),
-    reps: {
-      ...activateConfig().reps,
-      repCounts: {
-        ...activateConfig().reps.repCounts,
-        total: reps + activateConfig().reps.repCounts.baseline,
+  }
+  const setWeight = (weight) => {
+    if (!Number.isNaN(weight)) {
+      setActivateConfig({
+        ...activateConfig(),
+        activationForce: {
+          ...activateConfig().activationForce,
+          forces: {
+            ...activateConfig().activationForce.forces,
+            max: weight/2 + 10,
+          },
+          softMax: weight/2,
+        }
+      })
+      setRegularConfig({
+        ...regularConfig(),
+        mode: {
+          ...regularConfig().mode,
+          concentric: weight/2,
+          eccentric: (regularConfig().mode.eccentric/regularConfig().mode.concentric || 1) * weight/2,
+        }
+      });
+    }
+  };
+  const reps = () => {
+    if (command() === "Activate") {
+      return activateConfig().reps.repCounts.total - activateConfig().reps.repCounts.baseline;
+    } else if (command() === "Regular") {
+      return regularConfig().repCount;
+    } else if (command() === "Echo") {
+      return echoConfig().repCount;
+    }
+  }
+  const setReps = (reps) => {
+    setActivateConfig({
+      ...activateConfig(),
+      reps: {
+        ...activateConfig().reps,
+        repCounts: {
+          ...activateConfig().reps.repCounts,
+          total: reps + activateConfig().reps.repCounts.baseline,
+        }
       }
-    }
-  });
+    })
+    setRegularConfig({
+      ...regularConfig(),
+      repCount: reps,
+    });
+    setEchoConfig({
+      ...echoConfig(),
+      repCount: reps,
+    });
+  };
   const preset = () => Object.keys(PRESETS).find((presetName) => deepEqual(PRESETS[presetName], { concentric: activateConfig().activationForce.concentric, eccentric: activateConfig().activationForce.eccentric })) || "Custom";
   const setPreset = (presetName) => setActivateConfig({
     ...activateConfig(),
@@ -99,25 +176,54 @@ export default function Manual() {
   return (
     <div class="flex flex-col h-full">
       <Show when={!Trainer.active()}>
-        <BasicControls weight={weight()} setWeight={setWeight} reps={reps()} setReps={setReps} preset={preset()} setPreset={setPreset} />
+        <BasicControls weight={weight()} setWeight={setWeight} reps={reps()} setReps={setReps} command={command()} setCommand={setCommand} />
         <form class="flex flex-col flex-1 p-2" onSubmit={async (e) => {
           e.preventDefault();
-          const config = getNestedFormData(e.currentTarget) as typeof DEFAULT_CONFIG;
-          setSavedActivateConfig(config);
+          const config = getNestedFormData(e.currentTarget);
+
+          if (command() === "Activate") {
+            setSavedActivateConfig(config);
+          } else if (command() === "Regular") {
+            setSavedRegularConfig(config);
+          } else if (command() === "Echo") {
+            setSavedEchoConfig(config);
+          }
 
           if (!Trainer.connected()) {
             await Trainer.connect();
           }
 
-          await Trainer.activate(config.reps, config.activationForce);  
+          if (command() === "Activate") {
+            await Trainer.activate(config.reps, config.activationForce);  
+          } else if (command() === "Regular") {
+            await Trainer._writeCommand(getRegularCommand(config));
+          } else if (command() === "Echo") {
+            console.log(getEchoCommand(config));
+            await Trainer._writeCommand(getEchoCommand(config));
+          }
         }}>
           <div class="flex-1 basis-0 overflow-y-auto">
-            <ActivateFields value={activateConfig()} onInput={e => setActivateConfig(getNestedFormData(e.target.form))} />
+            <Show when={command() === "Activate"}>
+              <ActivateFields value={activateConfig()} onInput={e => setActivateConfig(getNestedFormData(e.target.form))} preset={preset} setPreset={setPreset} />
+            </Show>
+            <Show when={command() === "Regular"}>
+              <RegularFields value={regularConfig()} onInput={e => setRegularConfig(getNestedFormData(e.target.form))}/>
+            </Show>
+            <Show when={command() === "Echo"}>
+              <EchoFields value={echoConfig()} onInput={e => setEchoConfig(getNestedFormData(e.target.form))}/>
+            </Show>
           </div>
+          <FieldStyles/>
           <div class="flex">
             <Button onClick={(e) => {
               e.preventDefault();
-              setActivateConfig(DEFAULT_CONFIG);
+              if (command() === "Activate") {
+                setActivateConfig(DEFAULT_ACTIVATE_CONFIG);
+              } else if (command() === "Regular") {
+                setRegularConfig(DEFAULT_REGULAR_CONFIG);
+              } else if (command() === "Echo") {
+                setEchoConfig(DEFAULT_ECHO_CONFIG);
+              }
             }}>Reset</Button>
             <Button class="ml-2 flex-1" type="submit" primary>{Trainer.connected() ? "Workout!" : "Connect"}</Button>
           </div>
@@ -137,7 +243,7 @@ function BasicControls(props) {
         <FeaturedInput label="lbs total" value={toLbs(props.weight)} setValue={(lbs) => props.setWeight(toKg(lbs))} />
         <FeaturedInput label="reps" value={props.reps} setValue={props.setReps} />
       </div>
-      <PresetSelect value={props.preset} setValue={props.setPreset} />
+      <CommandSelect value={props.command} setValue={props.setCommand} />
     </div>
   )
 }
@@ -153,61 +259,118 @@ function toKg(lbs) {
 function FeaturedInput(props) {
   return (
     <div class="field">
-      <input class="bg-gray-700 text-center p-2" style="font-size: 3em;" type="number" step="any" id={props.id} name={props.id} value={props.value} onInput={(e) => props.setValue(e.target.valueAsNumber)} />
+      <input class="bg-gray-700 text-center p-2" style="font-size: 3em;" type="number" step="any" id={props.id} name={props.id} value={props.value} disabled={Number.isNaN(props.value)} onInput={(e) => props.setValue(e.target.valueAsNumber)} />
       <label class="text-center" for={props.id}>{props.label}</label>
     </div>
   );
 }
 
-function PresetSelect(props) {
+function CommandSelect(props) {
   return (
     <select onChange={(e) => props.setValue(e.target.value)} class="text-gray-900 w-full text-xl p-2">
-      <option value="Custom" selected={props.value === "Custom"}>Custom</option>
-      <For each={Object.keys(PRESETS)}>{(presetName) => (
-        <option value={presetName} selected={props.value === presetName}>{presetName}</option>
-      )}</For>
+      <option value="Activate" selected={props.value === "Activate"}>Activate</option>
+      <option value="Regular" selected={props.value === "Regular"}>Regular</option>
+      <option value="Echo" selected={props.value === "Echo"}>Echo</option>
     </select>
+  );
+}
+
+function FieldStyles() {
+  return <style>
+  {`
+    body {
+        font-family: sans-serif;
+    }
+    label {
+        display: block;
+        font-size: 0.85em;
+    }
+    fieldset {
+        padding:0px;
+        background:rgba(0,0,0,0.02);
+        border:1px solid rgba(0,0,0,0.15);
+        margin-top:5px;
+        font-size:0.85em;
+    }
+    fieldset:not(:has(fieldset)) {
+        display:flex;
+    }
+    legend {
+        font-size: 1em;
+    }
+    .field {
+        flex: 1;
+        padding:4px;
+        margin-top:5px;
+    }
+    input:where([type="number"]) {
+        width:100%;
+        box-sizing:border-box;
+        font-size:1rem;
+    }
+  `}
+</style>
+}
+
+function RegularFields(props) {
+  return (
+    <details>
+      <summary class="p-2">Advanced</summary>
+      <fieldset>
+        <legend>Rep Counts</legend>
+        <NumberInput label="ROM Reps" id={"romRepCount"} value={props.value.romRepCount} onInput={props.onInput} />
+        <NumberInput label="Working Reps" id={"repCount"} value={props.value.repCount} onInput={props.onInput} />
+      </fieldset>
+      <fieldset>
+        <legend>Mode</legend>
+        <NumberInput label="Spotter" id={"mode.spotter"} value={props.value.mode.spotter} onInput={props.onInput} />
+        <NumberInput label="Concentric" id={"mode.concentric"} value={props.value.mode.concentric} onInput={props.onInput} />
+        <NumberInput label="Eccentric" id={"mode.eccentric"} value={props.value.mode.eccentric} onInput={props.onInput} />
+        <NumberInput label="Progression" id={"mode.progression"} value={props.value.mode.progression} onInput={props.onInput} />
+      </fieldset>
+      <fieldset>
+        <legend>Curve</legend>
+        <NumberInput label="Linear (bx)" id={"mode.curve.linearC1"} value={props.value.mode.curve.linearC1} onInput={props.onInput} />
+        <NumberInput label="Square (ax^2)" id={"mode.curve.squareC2"} value={props.value.mode.curve.squareC2} onInput={props.onInput} />
+      </fieldset>
+    </details>
+  );
+}
+
+function EchoFields(props) {
+  return (
+    <details>
+      <summary class="p-2">Advanced</summary>
+      <fieldset>
+        <legend>Rep Counts</legend>
+        <NumberInput label="ROM Reps" id={"romRepCount"} value={props.value.romRepCount} onInput={props.onInput} />
+        <NumberInput label="Working Reps" id={"repCount"} value={props.value.repCount} onInput={props.onInput} />
+      </fieldset>
+      <fieldset>
+        <legend>Mode</legend>
+        <NumberInput label="Spotter" id={"mode.spotter"} value={props.value.mode.spotter} onInput={props.onInput} />
+        <NumberInput label="Eccentric Overload" id={"mode.eccentricOverload"} value={props.value.mode.eccentricOverload} onInput={props.onInput} />
+        <NumberInput label="Reference Map Blend" id={"mode.referenceMapBlend"} value={props.value.mode.referenceMapBlend} onInput={props.onInput} />
+        <NumberInput label="Concentric Delay" id={"mode.concentricDelayS"} value={props.value.mode.concentricDelayS} onInput={props.onInput} />
+      </fieldset>
+      <fieldset>
+        <legend>Concentric</legend>
+        <NumberInput label="Duration" id={"mode.concentric.duration"} value={props.value.mode.concentric.duration} onInput={props.onInput} />
+        <NumberInput label="Max Velocity" id={"mode.concentric.maxVelocity"} value={props.value.mode.concentric.maxVelocity} onInput={props.onInput} />
+      </fieldset>
+      <fieldset>
+        <legend>Eccentric</legend>
+        <NumberInput label="Duration" id={"mode.eccentric.duration"} value={props.value.mode.eccentric.duration} onInput={props.onInput} />
+        <NumberInput label="Max Velocity" id={"mode.eccentric.maxVelocity"} value={props.value.mode.eccentric.maxVelocity} onInput={props.onInput} />
+      </fieldset>
+    </details>
   );
 }
 
 function ActivateFields(props) {
   return (<>
-    <style>
-      {`
-        body {
-            font-family: sans-serif;
-        }
-        label {
-            display: block;
-            font-size: 0.85em;
-        }
-        fieldset {
-            padding:0px;
-            background:rgba(0,0,0,0.02);
-            border:1px solid rgba(0,0,0,0.15);
-            margin-top:5px;
-            font-size:0.85em;
-        }
-        fieldset:not(:has(fieldset)) {
-            display:flex;
-        }
-        legend {
-            font-size: 1em;
-        }
-        .field {
-            flex: 1;
-            padding:4px;
-            margin-top:5px;
-        }
-        input:where([type="number"]) {
-            width:100%;
-            box-sizing:border-box;
-            font-size:1rem;
-        }
-      `}
-    </style>
     <RepConfig id="reps" value={props.value.reps} onInput={props.onInput} />
-    <ActivationForce id="activationForce" value={props.value.activationForce} onInput={props.onInput} />
+    <ActivationForce id="activationForce" value={props.value.activationForce} onInput={props.onInput} preset={props.preset} setPreset={props.setPreset} />
   </>
   );
 }
@@ -264,6 +427,7 @@ function ActivationForce(props) {
   return (
     <details>
       <summary class="p-2">Advanced Forces</summary>
+      <ActivationPresetSelect value={props.preset} setValue={props.setPreset}/>
       <fieldset>
         <fieldset>
           <legend>Forces</legend>
@@ -278,6 +442,17 @@ function ActivationForce(props) {
         <ActivationPhase label="Eccentric" id={props.id + ".eccentric"} value={props.value.eccentric} onInput={props.onInput} />
       </fieldset>
     </details>
+  );
+}
+
+function ActivationPresetSelect(props) {
+  return (
+    <select onChange={(e) => props.setValue(e.target.value)} class="text-gray-900 w-full text-xl p-2">
+      <option value="Custom" selected={props.value === "Custom"}>Custom</option>
+      <For each={Object.keys(PRESETS)}>{(presetName) => (
+        <option value={presetName} selected={props.value === presetName}>{presetName}</option>
+      )}</For>
+    </select>
   );
 }
 

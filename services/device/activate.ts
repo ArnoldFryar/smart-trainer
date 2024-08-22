@@ -84,7 +84,7 @@ export function getForces(
   softMax: number,
   profile = PRESETS.NEW_SCHOOL,
   increment = 0,
-  max = softMax + 10,
+  max = softMax + 10
 ) {
   return {
     ...profile,
@@ -177,6 +177,135 @@ export function getActivateCommand(
   dataView.setFloat32(84, force.forces.max, true);
   dataView.setFloat32(88, force.softMax, true);
   dataView.setFloat32(92, force.increment, true);
+
+  return buffer;
+}
+
+export const ECHO_HEADER = 78; // 0x4E;
+
+// Isometric-ish
+export type EchoConfig = {
+  romRepCount: number /* i8, byte */; // 0 in p
+  repCount: number /* i8, byte */;
+  mode: /* M */ {
+    // used in p
+    spotter: number /* i16, short */; // 0 in p, 1.3f i.MEDIUM (m/s?)
+    eccentricOverload: number /* i16, short */; // s/e in p
+    referenceMapBlend: number /* i16, short */; // 0 in p
+    concentricDelayS: number /* f32, float */; // 0.0f in p
+    concentric: {
+      duration: number /* f32, float? */; // f2/c in p, seconds
+      maxVelocity: number /* f32, float */;
+    };
+    eccentric: {
+      duration: number /* f32, float? */; // 0.1f in p, seconds
+      maxVelocity: number /* f32, float */;
+    };
+  };
+};
+
+export function getEchoConfig(
+  reps,
+  concentricDuration,
+  eccentricOverload = 0
+): EchoConfig {
+  return {
+    romRepCount: 3,
+    repCount: reps,
+    mode: {
+      spotter: 0,
+      eccentricOverload,
+      referenceMapBlend: 0,
+      concentricDelayS: 0.1,
+      concentric: {
+        duration: concentricDuration,
+        maxVelocity: 55,
+      },
+      eccentric: {
+        duration: 0,
+        maxVelocity: -200,
+      },
+    },
+  };
+}
+
+export function getEchoCommand(config: EchoConfig) {
+  const buffer = new ArrayBuffer(32);
+  const dataView = new DataView(buffer);
+
+  dataView.setUint32(0, ECHO_HEADER, true);
+  dataView.setUint8(4, config.romRepCount);
+  dataView.setUint8(5, config.repCount);
+  dataView.setUint16(6, config.mode.spotter, true);
+  dataView.setUint16(8, config.mode.eccentricOverload, true);
+  dataView.setUint16(10, config.mode.referenceMapBlend, true);
+  dataView.setFloat32(12, config.mode.concentricDelayS, true);
+  dataView.setFloat32(16, config.mode.concentric.duration, true);
+  dataView.setFloat32(20, config.mode.concentric.maxVelocity, true);
+  dataView.setFloat32(24, config.mode.eccentric.duration, true);
+  dataView.setFloat32(28, config.mode.eccentric.maxVelocity, true);
+
+  return buffer;
+}
+
+export const REGULAR_HEADER = 79; // 0x4F;
+
+// Isotonic-ish
+export type RegularConfig = {
+  romRepCount: number /* i8, byte */;
+  repCount: number /* i8, byte */;
+  mode: /* G */ {
+    // used in o
+    spotter: number /* i16, short */; // mm/s?
+    concentric: number /* f32, float */;
+    eccentric: number /* f32, float */;
+    progression: number /* f32, float */;
+
+    // seems only linearC1 is used ("bands")
+    curve: /* F */ {
+      linearC1: number /* f32, float */;
+      squareC2: number /* f32, float */; // hardcoded to 0.0f in F
+    };
+  };
+};
+
+export function getRegularConfig(
+  repCount,
+  concentric,
+  eccentric = concentric,
+  spotter = 0,
+  progression = 0,
+  linearC1 = 0
+): RegularConfig {
+  return {
+    romRepCount: 3,
+    repCount,
+    mode: {
+      spotter,
+      concentric,
+      eccentric,
+      progression,
+      curve: {
+        linearC1,
+        squareC2: 0.0,
+      },
+    },
+  };
+}
+
+export function getRegularCommand(config: RegularConfig) {
+  const buffer = new ArrayBuffer(28);
+  const dataView = new DataView(buffer);
+
+  dataView.setUint32(0, REGULAR_HEADER, true);
+  dataView.setUint8(4, config.romRepCount);
+  dataView.setUint8(5, config.repCount);
+  dataView.setUint16(6, config.mode.spotter, true);
+  dataView.setFloat32(8, config.mode.concentric, true);
+  dataView.setFloat32(12, config.mode.eccentric, true);
+  dataView.setFloat32(16, config.mode.progression, true);
+  dataView.setFloat32(20, config.mode.curve.linearC1, true);
+  dataView.setFloat32(24, config.mode.curve.squareC2, true);
 
   return buffer;
 }

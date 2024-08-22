@@ -21,6 +21,7 @@ const CHARACTERISTICS = {
   DIAGNOSTIC_DETAILS: '5fa538ec-d041-42f6-bbd6-c30d475387b7',
   REPS: '8308f2a6-0875-4a94-a86f-5c5c5e1b068a',
   COMMAND: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
+  HEURISTIC: 'c7b73007-b245-4503-a1ed-9e4e97eb9802'
 };
 
 class VFormTrainer {

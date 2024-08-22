@@ -13,7 +13,9 @@ export function getNestedFormData(form: HTMLFormElement): any {
       }
       obj = obj[part];
     }
-    const resolvedValue = Number.isNaN(parseFloat(value)) ? value : parseFloat(value);
+    const resolvedValue = Number.isNaN(parseFloat(value))
+      ? value
+      : parseFloat(value);
     if (last.endsWith("[]")) {
       const lastActual = last.slice(0, -2);
       (obj[lastActual] ??= []).push(resolvedValue);

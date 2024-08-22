@@ -10,6 +10,7 @@ import {
   SetConfig,
   WorkoutConfig,
 } from "../../../services/workout/index.js";
+import { getSetMetrics } from "../../../services/workout/util.js";
 import { wakeLock } from "../../../services/util/wake-lock.js";
 
 export namespace WorkoutActive {
@@ -89,7 +90,7 @@ export namespace WorkoutActiveView {
     currentRep: number;
     calibrationRepsRemaining: number;
     meanVelocityPerRep: number[];
-    setMetrics: any;
+    setMetrics: ReturnType<typeof getSetMetrics>;
   }
 }
 
@@ -102,13 +103,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
   return (
     <>
       <Show when={props.state === "rest"}>
-        <div class="flex flex-col p-4 h-full">
-          <div class="text-gray-400 uppercase text-center flex-none">Set Complete</div>
-          <pre class="grow text-sm overflow-y-auto">
-            {JSON.stringify(props.setMetrics ?? {}, null, 2)}
-          </pre>
-          <AutoButton timeout={props.set.rest ?? 10000} onClick={props.actions?.next} class="flex-none">Next Set</AutoButton>          
-        </div>
+        <SetSummary set={props.set} next={props.actions.next} setMetrics={props.setMetrics} />
       </Show>
       <Show when={props.state === "complete"}>
         <div class="flex flex-col p-4 h-full">
@@ -176,6 +171,35 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
         </WorkoutActiveContainer>
       </Show>
     </>
+  );
+}
+
+export namespace SetSummary {
+  export interface Props {
+    set: SetConfig;
+    next: () => void;
+    setMetrics: ReturnType<typeof getSetMetrics>;
+  }
+}
+
+export function SetSummary(props: SetSummary.Props) {
+  return (
+    <div class="flex flex-col p-4 h-full">
+      <div class="text-gray-400 uppercase text-center flex-none">Set Complete</div>
+      {/* Best Effort () */}
+      {/* + Rep PRs () */}
+      {/* Total Reps */}
+      {/* Avg Weight */}
+      {/* Heaviest Rep () */}
+      {/* e1rm () */}
+      {/* Total Joules () */}
+      {/* Total Time */}
+      {/* Gold: #ffcc00, Silver: #aabbcc, Bronze: #dd9966 */}
+      <pre class="grow text-sm overflow-y-auto">
+        {JSON.stringify(props.setMetrics ?? {}, null, 2)}
+      </pre>
+      <AutoButton timeout={props.set.rest ?? 10000} onClick={props.next} class="flex-none">Next Set</AutoButton>          
+    </div>
   );
 }
 
