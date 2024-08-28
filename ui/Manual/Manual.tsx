@@ -4,6 +4,7 @@ import { createLocalSignal } from '../../services/util/signals.js';
 import { PRESETS, getRegularCommand, getEchoCommand } from '../../services/device/activate.js';
 import { Button } from '../_common/Elements/Elements.jsx';
 import { WeightAndRangeOfMotion } from '../Workout/WeightAndRangeOfMotion/WeightAndRangeOfMotion.jsx';
+import { wakeLock } from '../../services/util/wake-lock.js';
 
 const DEFAULT_ACTIVATE_CONFIG = {
   reps: {
@@ -508,6 +509,8 @@ function WorkoutView(props) {
   const totalReps = () => props.config.reps.repCounts.total - props.config.reps.repCounts.baseline;
 
   const targetWeight = () => props.config.activationForce.softMax * 2;
+
+  wakeLock();
 
   onCleanup(() => {
     if (Trainer.connected()) {
