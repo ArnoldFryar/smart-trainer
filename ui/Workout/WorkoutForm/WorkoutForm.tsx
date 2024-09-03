@@ -1,4 +1,4 @@
-import { batch, createEffect, createResource, createSignal, For, Show, untrack } from "solid-js";
+import { batch, createResource, createSignal, For, Show } from "solid-js";
 import { EXERCISES } from "../../../services/workout/exercises.js";
 import {
   Button,
@@ -10,7 +10,7 @@ import {
 } from "../../_common/Elements/Elements.js";
 import { createLocalSignal } from "../../../services/util/signals.js";
 import { DEFAULT_USERS, WorkoutConfig } from "../../../services/workout/index.js";
-import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
+import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE } from "../../../services/workout/modes.js";
 import { getNestedFormData } from "../../../services/util/form.js";
 import { getEstimated1RepMax } from "../../../services/db/settings.js";
 
@@ -270,10 +270,14 @@ function Set(props) {
           </span>
           <span class="block text-xs text-gray-400 mt-2">
           <span class="font-mono mr-2">{props.open ? "▼" : "▶"}</span>
-            {/*WORKOUT_MODE_CONFIGS[value().mode]?.name*/}
-            {weight() + (maxWeight() && maxWeight() !== weight() ? `→${maxWeight()}` : "")}lbs 
-            <Show when={e1rm()}>
-              ({(100*weight()/e1rm()).toFixed(1)}%)
+            <Show when={weight()}>
+              {weight() + (maxWeight() && maxWeight() !== weight() ? `→${maxWeight()}` : "")}lbs 
+              <Show when={e1rm()}>
+                ({(100*weight()/e1rm()).toFixed(1)}%)
+              </Show>
+            </Show>
+            <Show when={value().concentricDuration != null}>
+              {value().concentricDuration}s
             </Show>
             <Show when={value().reps}>
               &nbsp;&bull; {value().reps}reps
@@ -291,55 +295,31 @@ function Set(props) {
         </span>
       </summary>
       <div class="border border-gray-800 px-2 -mt-2">
-        {/* <FieldSet label="Exercise">
-          <Select name={`${props.name}.exercise`} class="mr-2" onChange={applyCachedExercise}>
-            <For each={EXERCISE_KEYS}>
-              {(key) => (
-                <option selected={key === value().exercise}>
-                  {key}
-                </option>
-              )}
-            </For>
-          </Select>
-        </FieldSet>
-        <FieldSet label="Workout Mode">
-          <Select name={`${props.name}.exercise`} class="mr-2" onChange={applyCachedExercise}>
-            <For each={ACTIVE_WORKOUT_MODES}>
-              {(mode) => (
-                <option selected={mode === value().mode}>
-                  {mode}
-                </option>
-              )}
-            </For>
-          </Select>
-        </FieldSet> */}
-        {/* <RadioGroup label="Workout Mode" checkedValue={value().mode} onChange={applyCachedMode}>
-          <For each={ACTIVE_WORKOUT_MODES}>
-            {(mode) => (
-              <Radio name={`${props.name}.mode`} value={mode}>
-                <span class="text-sm">{WORKOUT_MODE_CONFIGS[mode].name}</span>
-              </Radio>
-            )}
-          </For>
-        </RadioGroup> */}
-        <FieldSet 
-          label={`${value().mode === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"}`} 
-          subtext={`(${(100*weight()/e1rm()).toFixed(1)}% e1RM)`}>
-          <Slider name={`${props.name}.weight`} value={weight() ?? 40} max={440} min={1} unit="lbs" onInput={onWeightInput}/>
-        </FieldSet>
-        <Show when={value().mode === WORKOUT_MODE.PROGRESSION}>
-          <FieldSet label="Maximum Weight" subtext={`(${(100*maxWeight()/e1rm()).toFixed(1)}% e1RM)`}>
-            {/* TODO: show ± percentage of e1RM */}
-            <Slider name={`${props.name}.maxWeight`} value={Math.max(maxWeight(), weight()) ?? 40} max={440} min={1} unit="lbs" onInput={onMaxWeightInput}/>
-          </FieldSet>
-          <FieldSet label="Incremental Steps">
-            <Slider name={`${props.name}.progressionReps`} value={value().progressionReps ?? 3} max={10} min={1} unit="reps"/>
+        <Show when={value().mode === WORKOUT_MODE.ECHO}>
+          <FieldSet label="Concentric Duration">
+            <Slider name={`${props.name}.concentricDuration`} value={value().concentricDuration ?? 2} max={10} min={0} step={0.25} unit="s"/>
           </FieldSet>
         </Show>
-        <FieldSet label="Spotter Velocity" subtext="X% MVT">
-          {/* TODO: show percentage of eMVT */}
-          <Slider name={`${props.name}.spotterVelocity`} value={value().spotterVelocity ?? 0.25} max={0.5} min={0} step={0.01} unit="m/s"/>
-        </FieldSet>
+        <Show when={value().mode !== WORKOUT_MODE.ECHO}>
+          <FieldSet 
+            label={`${value().mode === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"}`} 
+            subtext={`(${(100*weight()/e1rm()).toFixed(1)}% e1RM)`}>
+            <Slider name={`${props.name}.weight`} value={weight() ?? 40} max={440} min={1} unit="lbs" onInput={onWeightInput}/>
+          </FieldSet>
+          <Show when={value().mode === WORKOUT_MODE.PROGRESSION}>
+            <FieldSet label="Maximum Weight" subtext={`(${(100*maxWeight()/e1rm()).toFixed(1)}% e1RM)`}>
+              {/* TODO: show ± percentage of e1RM */}
+              <Slider name={`${props.name}.maxWeight`} value={Math.max(maxWeight(), weight()) ?? 40} max={440} min={1} unit="lbs" onInput={onMaxWeightInput}/>
+            </FieldSet>
+            <FieldSet label="Incremental Steps">
+              <Slider name={`${props.name}.progressionReps`} value={value().progressionReps ?? 3} max={10} min={1} unit="reps"/>
+            </FieldSet>
+          </Show>
+          <FieldSet label="Spotter Velocity" subtext="X% MVT">
+            {/* TODO: show percentage of eMVT */}
+            <Slider name={`${props.name}.spotterVelocity`} value={value().spotterVelocity ?? 0.25} max={0.5} min={0} step={0.01} unit="m/s"/>
+          </FieldSet>
+        </Show>
         <RadioGroup label="Workout Limit" checkedValue={value().limit}>
           <For each={Object.keys(WORKOUT_LIMIT)}>
             {(limit) => (

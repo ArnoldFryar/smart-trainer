@@ -133,10 +133,12 @@ export function getReps(count: number, baseline = 3, adaptive = 3) {
 
 const ACTIVATION_HEADER = 0x04;
 
-export function getActivateCommand(
-  reps: ReturnType<typeof getReps>,
-  force: ReturnType<typeof getForces>
-) {
+export type ActivateConfig = {
+  reps: ReturnType<typeof getReps>;
+  force: ReturnType<typeof getForces>;
+};
+
+export function getActivateCommand({ reps, force }: ActivateConfig) {
   const buffer = new ArrayBuffer(96);
   const dataView = new DataView(buffer);
 
@@ -207,7 +209,7 @@ export type EchoConfig = {
 export function getEchoConfig(
   reps,
   concentricDuration,
-  eccentricOverload = 0
+  eccentricOverload = 1
 ): EchoConfig {
   return {
     romRepCount: 3,

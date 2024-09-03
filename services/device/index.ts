@@ -1,27 +1,27 @@
-import { createSignal } from 'solid-js';
-import { createObservedSignal } from '../util/signals.js';
-import { promisifyEvent } from '../util/promisify.js';
-import { enqueue } from '../util/ble-queue.js';
-import { getColorSchemeCommand } from './color.js';
-import { getStopCommand, getActivateCommand } from './activate.js';
-import { parseSample } from './cables.js';
-import { parseMode, MODES } from './mode.js';
-import { parseReps } from './reps.js';
+import { createSignal } from "solid-js";
+import { createObservedSignal } from "../util/signals.js";
+import { promisifyEvent } from "../util/promisify.js";
+import { enqueue } from "../util/ble-queue.js";
+import { getColorSchemeCommand } from "./color.js";
+import { getStopCommand, getActivateCommand } from "./activate.js";
+import { parseSample } from "./cables.js";
+import { parseMode, MODES } from "./mode.js";
+import { parseReps } from "./reps.js";
 
-const PRIMARY_SERVICE_ID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const PRIMARY_SERVICE_ID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const CHARACTERISTICS = {
-  LEFT_CABLE: 'bc4344e9-8d63-4c89-8263-951e2d74f744',
-  RIGHT_CABLE: '92ef83d6-8916-4921-8172-a9919bc82566',
-  MODE: '67d0dae0-5bfc-4ea2-acc9-ac784dee7f29',
-  VERSION: '74e994ac-0e80-4c02-9cd0-76cb31d3959b',
-  BLE_UPDATE_REQUEST: 'ef0e485a-8749-4314-b1be-01e57cd1712e',
-  UPDATE_STATE: '383f7276-49af-4335-9072-f01b0f8acad6',
-  WIFI_STATE: 'a7d06ce0-2e84-485f-9c25-3d4ba6fe7319',
-  SAMPLE: '90e991a6-c548-44ed-969b-eb541014eae3',
-  DIAGNOSTIC_DETAILS: '5fa538ec-d041-42f6-bbd6-c30d475387b7',
-  REPS: '8308f2a6-0875-4a94-a86f-5c5c5e1b068a',
-  COMMAND: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
-  HEURISTIC: 'c7b73007-b245-4503-a1ed-9e4e97eb9802'
+  LEFT_CABLE: "bc4344e9-8d63-4c89-8263-951e2d74f744",
+  RIGHT_CABLE: "92ef83d6-8916-4921-8172-a9919bc82566",
+  MODE: "67d0dae0-5bfc-4ea2-acc9-ac784dee7f29",
+  VERSION: "74e994ac-0e80-4c02-9cd0-76cb31d3959b",
+  BLE_UPDATE_REQUEST: "ef0e485a-8749-4314-b1be-01e57cd1712e",
+  UPDATE_STATE: "383f7276-49af-4335-9072-f01b0f8acad6",
+  WIFI_STATE: "a7d06ce0-2e84-485f-9c25-3d4ba6fe7319",
+  SAMPLE: "90e991a6-c548-44ed-969b-eb541014eae3",
+  DIAGNOSTIC_DETAILS: "5fa538ec-d041-42f6-bbd6-c30d475387b7",
+  REPS: "8308f2a6-0875-4a94-a86f-5c5c5e1b068a",
+  COMMAND: "6e400002-b5a3-f393-e0a9-e50e24dcca9e",
+  HEURISTIC: "c7b73007-b245-4503-a1ed-9e4e97eb9802",
 };
 
 class VFormTrainer {
@@ -32,7 +32,12 @@ class VFormTrainer {
   public mode: () => ReturnType<typeof parseMode>;
   public reps: () => ReturnType<typeof parseReps>;
   public phase: () => "concentric" | "eccentric";
-  public rangeOfMotion: () => { top: number; bottom: number, left: number, right: number };
+  public rangeOfMotion: () => {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
 
   private _device?: BluetoothDevice;
   private _server?: BluetoothRemoteGATTServer;
@@ -46,17 +51,17 @@ class VFormTrainer {
     this.active = () => this.connected() && this.mode() !== MODES.BASELINE;
     this.phase = () => {
       const { up, down } = this.reps();
-      return up === down ? 'concentric' : 'eccentric';
+      return up === down ? "concentric" : "eccentric";
     };
     this.rangeOfMotion = () => {
       const { rangeTop, rangeBottom } = this.reps();
       const { left, right } = this.sample();
       const range = rangeTop - rangeBottom;
-      return { 
-        top: rangeTop, 
-        bottom: rangeBottom, 
-        left: (left.position - rangeBottom) / range, 
-        right: (right.position - rangeBottom) / range
+      return {
+        top: rangeTop,
+        bottom: rangeBottom,
+        left: (left.position - rangeBottom) / range,
+        right: (right.position - rangeBottom) / range,
       };
     };
     this.autoconnect();
@@ -65,7 +70,7 @@ class VFormTrainer {
     try {
       let abortController: AbortController;
       const devices = await navigator.bluetooth.getDevices();
-      const device = devices.find((d) => d.name.startsWith('Vee'));
+      const device = devices.find((d) => d.name.startsWith("Vee"));
       if (device) {
         const watchAndConnect = async () => {
           if (document.hidden) {
@@ -76,8 +81,8 @@ class VFormTrainer {
               signal: abortController.signal,
             });
 
-            await promisifyEvent(device, 'advertisementreceived');
-            document.removeEventListener('visibilitychange', watchAndConnect);
+            await promisifyEvent(device, "advertisementreceived");
+            document.removeEventListener("visibilitychange", watchAndConnect);
 
             this._doConnect(device);
           }
@@ -93,7 +98,7 @@ class VFormTrainer {
   async connect() {
     this._setConnected(undefined);
     const device = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: 'Vee' }],
+      filters: [{ namePrefix: "Vee" }],
       optionalServices: [PRIMARY_SERVICE_ID],
     });
     await this._doConnect(device);
@@ -102,8 +107,8 @@ class VFormTrainer {
     try {
       this._device = device;
       this._server = await device.gatt.connect();
-      this._device.addEventListener('gattserverdisconnected', () => {
-        console.log('disconnect');
+      this._device.addEventListener("gattserverdisconnected", () => {
+        console.log("disconnect");
         this._device = null;
         this._server = null;
         this._service = null;
@@ -128,19 +133,19 @@ class VFormTrainer {
     await this._writeCommand(getColorSchemeCommand(colors));
   }
   async activate(reps, force) {
-    await this._writeCommand(getActivateCommand(reps, force));
+    await this._writeCommand(getActivateCommand({ reps, force }));
   }
   async stop() {
     await this._writeCommand(getStopCommand());
   }
   async _writeCommand(command) {
-    const commandCharacteristic = await this._service.getCharacteristic(CHARACTERISTICS.COMMAND);
-    const method = commandCharacteristic.properties.writeWithoutResponse ? 'writeValueWithoutResponse' : 'writeValueWithResponse';
-    await enqueue(
-      commandCharacteristic,
-      method,
-      command
+    const commandCharacteristic = await this._service.getCharacteristic(
+      CHARACTERISTICS.COMMAND
     );
+    const method = commandCharacteristic.properties.writeWithoutResponse
+      ? "writeValueWithoutResponse"
+      : "writeValueWithResponse";
+    await enqueue(commandCharacteristic, method, command);
   }
   createNotifySignal<T extends (d?: DataView) => any>(
     characteristicUuid: string,
@@ -151,15 +156,15 @@ class VFormTrainer {
         characteristicUuid
       );
       const update = () => set(parseDataView(characteristic.value));
-      await enqueue(characteristic, 'startNotifications');
-      characteristic.addEventListener('characteristicvaluechanged', update);
-      await enqueue(characteristic, 'readValue');
+      await enqueue(characteristic, "startNotifications");
+      characteristic.addEventListener("characteristicvaluechanged", update);
+      await enqueue(characteristic, "readValue");
       return async () => {
         characteristic.removeEventListener(
-          'characteristicvaluechanged',
+          "characteristicvaluechanged",
           update
         );
-        await enqueue(characteristic, 'stopNotifications');
+        await enqueue(characteristic, "stopNotifications");
       };
     });
   }
@@ -173,7 +178,7 @@ class VFormTrainer {
         characteristicUuid
       );
       while (!cancelled) {
-        set(parseDataView(await enqueue(characteristic, 'readValue')));
+        set(parseDataView(await enqueue(characteristic, "readValue")));
       }
       return () => {
         cancelled = true;

@@ -5,6 +5,12 @@ import {
   untrack,
   createResource,
 } from "solid-js";
+import {
+  ActivateConfig,
+  EchoConfig,
+  getActivateCommand,
+  RegularConfig,
+} from "../device/activate";
 import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
 import { createAbortEffect, reactivePromise } from "../util/signals";
@@ -15,7 +21,12 @@ import { getSetMetrics, splitSamplesByPhase } from "./util";
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
 export function createWorkoutService(
   sets: Array<() => Promise<SetConfig>>,
-  save: (set: SetConfig, samples: Sample[], range: { top: number, bottom: number }, interrupted?: boolean) => void
+  save: (
+    set: SetConfig,
+    samples: Sample[],
+    range: { top: number; bottom: number },
+    interrupted?: boolean
+  ) => void
 ) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
@@ -25,25 +36,42 @@ export function createWorkoutService(
   );
   const [currentSetSamples, setCurrentSetSamples] = createSignal<Sample[]>([]);
   const currentSetActivationConfig = () => {
+    const { limit, ...limitConfig } = LIMIT_HANDLERS[currentSet()?.limit]?.(
+      currentSet()?.limitConfig as any
+    );
     return {
-      ...WORKOUT_MODE_CONFIGS[currentSet()?.mode]?.getActivationConfig(currentSet()?.modeConfig as any),
-      ...LIMIT_HANDLERS[currentSet()?.limit]?.(currentSet()?.limitConfig as any)
+      command: WORKOUT_MODE_CONFIGS[currentSet()?.mode]?.command,
+      config: WORKOUT_MODE_CONFIGS[currentSet()?.mode]?.config(
+        currentSet()?.modeConfig as any,
+        limitConfig
+      ),
+      limit,
     };
   };
   const calibrationReps = () => {
+    const { command, config } = currentSetActivationConfig();
     // We prefer to end on a concentric rep, so we add 0.5 to the baseline (except for eccentric only mode)
-    return (currentSetActivationConfig()?.reps.repCounts.baseline ?? 3) + (currentSet().mode === WORKOUT_MODE.ECCENTRIC ? 0 : 0.5);
-  }
+    const repOffset =
+      command === getActivateCommand &&
+      currentSet().mode !== WORKOUT_MODE.ECCENTRIC
+        ? 0.5
+        : 0;
+    return (
+      ((config as ActivateConfig).reps?.repCounts.baseline ??
+        (config as EchoConfig | RegularConfig).romRepCount ??
+        3) + repOffset
+    );
+  };
   const rangeOfMotion = () => {
     const { rangeTop, rangeBottom } = Trainer.reps();
     return { top: rangeTop, bottom: rangeBottom };
-  }
+  };
   const currentSetPhases = () => {
     return splitSamplesByPhase(currentSetSamples(), rangeOfMotion());
-  }
+  };
   const currentSetMetrics = () => {
     return getSetMetrics(currentSetSamples(), rangeOfMotion());
-  }
+  };
   const calibrationRepsRemaining = () => {
     const { up, down } = Trainer.reps();
     return calibrationReps() - (up + down) / 2;
@@ -98,12 +126,12 @@ export function createWorkoutService(
           return;
         }
 
-        const { reps, forces, limit } = currentSetActivationConfig();
+        const { command, config, limit } = currentSetActivationConfig();
 
         setState("calibrating");
         setCurrentSetSamples([]);
 
-        await Trainer.activate(reps, forces);
+        await Trainer._writeCommand(command(config));
         await setUserHue(currentSet().hue);
 
         setLoading(false);

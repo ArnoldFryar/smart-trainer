@@ -1,7 +1,7 @@
 import { createSignal, For, onCleanup, Show } from 'solid-js';
 import { getNestedFormData } from '../../services/util/form.js';
 import { createLocalSignal } from '../../services/util/signals.js';
-import { PRESETS, getRegularCommand, getEchoCommand } from '../../services/device/activate.js';
+import { PRESETS, getRegularCommand, getEchoCommand, getActivateCommand } from '../../services/device/activate.js';
 import { Button } from '../_common/Elements/Elements.jsx';
 import { WeightAndRangeOfMotion } from '../Workout/WeightAndRangeOfMotion/WeightAndRangeOfMotion.jsx';
 import { wakeLock } from '../../services/util/wake-lock.js';
@@ -195,11 +195,10 @@ export default function Manual() {
           }
 
           if (command() === "Activate") {
-            await Trainer.activate(config.reps, config.activationForce);  
+            await Trainer._writeCommand(getActivateCommand(config));
           } else if (command() === "Regular") {
             await Trainer._writeCommand(getRegularCommand(config));
           } else if (command() === "Echo") {
-            console.log(getEchoCommand(config));
             await Trainer._writeCommand(getEchoCommand(config));
           }
         }}>
