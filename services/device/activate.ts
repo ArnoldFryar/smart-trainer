@@ -209,7 +209,7 @@ export type EchoConfig = {
 export function getEchoConfig(
   reps,
   concentricDuration,
-  eccentricOverload = 1
+  eccentricOverload = 100
 ): EchoConfig {
   return {
     romRepCount: 3,
