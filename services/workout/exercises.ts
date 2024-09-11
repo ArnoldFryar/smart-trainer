@@ -31,6 +31,7 @@ export type Exercise = {
   mvt: number;
   equipment: string | string[];
   movement?: string;
+  type?: "COMBINED" | "SINGLE_CABLE" | "ALTERNATE";
 };
 
 export const EXERCISES: Record<string, Exercise> = {
@@ -106,8 +107,31 @@ export const EXERCISES: Record<string, Exercise> = {
     mvt: 0.4,
     movement: MOVEMENT.HORIZONTAL_PULL,
   },
+  SA_ROW: {
+    id: "SA_ROW",
+    ratio: avg(
+      148 / BACK_SQUAT_SS, // 0.611
+      146 / BACK_SQUAT_SL, // 0.667
+      0.7 * BENCH_SQUAT_RATIO // 0.525
+    ),
+    equipment: EQUIPMENT.HANDLES,
+    mvt: 0.4,
+    type: "ALTERNATE",
+  },
   DEADLIFT: {
     id: "DEADLIFT",
+    ratio: avg(
+      487.5 / BACK_SQUAT_WR, // 0.990
+      278 / BACK_SQUAT_SS, // 1.145
+      265.9 / BACK_SQUAT_SL, // 1.21
+      1.2
+    ),
+    equipment: EQUIPMENT.HANDLES,
+    mvt: 0.15,
+    movement: MOVEMENT.LEGS_HINGE,
+  },
+  JUMP: {
+    id: "JUMP",
     ratio: avg(
       487.5 / BACK_SQUAT_WR, // 0.990
       278 / BACK_SQUAT_SS, // 1.145

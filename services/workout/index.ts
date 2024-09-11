@@ -16,6 +16,7 @@ export type { Exercise };
 export type SetConfig = {
   exercise: Exercise;
   rest: number;
+  side;
   mode: keyof typeof WORKOUT_MODE;
   modeConfig: {
     weight?: number;
@@ -105,6 +106,7 @@ export const DEFAULT_USERS = {
 export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
   const users = DEFAULT_USERS;
   const workout_id = Math.random() + "";
+  const sides = ["LEFT", "RIGHT"].sort(() => Math.random() - 0.5);
 
   const setConfigs: Array<() => Promise<SetConfig>> = [];
   const save = (
@@ -155,22 +157,25 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
     const exercise = EXERCISES[set.exercise];
     for (const userId of userIds) {
       const user = users[userId];
-      setConfigs.push(async () => {
-        return {
-          exercise,
-          userId,
-          hue: user.hue,
-          mode,
-          modeConfig: normalizeModeConfig({
-            weight,
-            maxWeight,
-            progressionReps,
-            spotterVelocity,
-          }),
-          limit,
-          limitConfig,
-          rest: 10000,
-        };
+      (exercise.type === "ALTERNATE" ? sides : [null]).forEach((side) => {
+        setConfigs.push(async () => {
+          return {
+            exercise,
+            userId,
+            hue: user.hue,
+            side,
+            mode,
+            modeConfig: normalizeModeConfig({
+              weight,
+              maxWeight,
+              progressionReps,
+              spotterVelocity,
+            }),
+            limit,
+            limitConfig,
+            rest: 10000,
+          };
+        });
       });
     }
   }

@@ -119,6 +119,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
         <WorkoutActiveContainer
           unit={props.unit}
           exercise={props.set.exercise.id}
+          side={props.set.side}
           video=""
           leftWeight={props.leftWeight}
           rightWeight={props.rightWeight}
@@ -206,6 +207,7 @@ export function SetSummary(props: SetSummary.Props) {
 export namespace WorkoutActiveContainer {
   export interface Props {
     exercise: string;
+    side: "LEFT" | "RIGHT" | null;
     video: string;
     unit: "lbs" | "kg";
     leftWeight: number;
@@ -225,7 +227,7 @@ export function WorkoutActiveContainer(props: WorkoutActiveContainer.Props) {
       style="height:100vh"
     >
       <div class="text-center">
-        <div class="text-4xl font-light text-gray-200">{props.exercise}</div>
+        <div class="text-4xl font-light text-gray-200">{props.exercise}{props.side ? ` (${props.side})` : ""}</div>
         <InfoButton />
         <StopButton />
       </div>

@@ -10,9 +10,10 @@ import {
 } from "../../_common/Elements/Elements.js";
 import { createLocalSignal } from "../../../services/util/signals.js";
 import { DEFAULT_USERS, WorkoutConfig } from "../../../services/workout/index.js";
-import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE } from "../../../services/workout/modes.js";
+import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "../../../services/workout/modes.js";
 import { getNestedFormData } from "../../../services/util/form.js";
 import { getEstimated1RepMax } from "../../../services/db/settings.js";
+import { getActivateCommand } from "../../../services/device/activate.js";
 
 export type SetConfigCache = { 
   [exercise: keyof typeof EXERCISES]: { 
@@ -318,6 +319,13 @@ function Set(props) {
           <FieldSet label="Spotter Velocity" subtext="X% MVT">
             {/* TODO: show percentage of eMVT */}
             <Slider name={`${props.name}.spotterVelocity`} value={value().spotterVelocity ?? 0.25} max={0.5} min={0} step={0.01} unit="m/s"/>
+          </FieldSet>
+        </Show>
+        <Show when={WORKOUT_MODE_CONFIGS[value().mode].command !== getActivateCommand}>
+          <FieldSet 
+            label="Eccentric Weight" 
+            subtext={`(${(100*value().eccentricOverload/weight()).toFixed(1)}%)`}>
+            <Slider name={`${props.name}.eccentricOverload`} value={value().eccentricOverload ?? 100} max={440} min={0} unit="lbs"/>
           </FieldSet>
         </Show>
         <RadioGroup label="Workout Limit" checkedValue={value().limit}>
