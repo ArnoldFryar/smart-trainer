@@ -224,6 +224,13 @@ export const EXERCISES: Record<string, Exercise> = {
     mvt: 0.25, // TODO: check
     equipment: EQUIPMENT.HANDLES,
   },
+  SA_LATERAL_RAISE: {
+    id: "LATERAL_RAISE",
+    ratio: (2 * 35.6) / BACK_SQUAT_SL, // 0.16
+    mvt: 0.25, // TODO: check
+    equipment: EQUIPMENT.HANDLES,
+    type: "ALTERNATE",
+  },
   REAR_FLY: {
     id: "REAR_FLY",
     ratio: 125.7 / BACK_SQUAT_SL, // 0.57

@@ -12,6 +12,7 @@ import {
 } from "../../../services/workout/index.js";
 import { getSetMetrics } from "../../../services/workout/util.js";
 import { wakeLock } from "../../../services/util/wake-lock.js";
+import { Timer } from "../../_common/Timer/Timer.jsx";
 
 export namespace WorkoutActive {
   export interface Props {
@@ -51,6 +52,7 @@ export function WorkoutActive(props: WorkoutActive.Props) {
         state={workoutState.state}
         set={workoutState.currentSet}
         onComplete={props.onComplete}
+        prevSet={workoutState.prevSet}
         actions={{ ...actions, complete: props.onComplete }}
         video=""
         unit={"lbs" /* TODO: get from user preferences */}
@@ -72,6 +74,7 @@ export namespace WorkoutActiveView {
   export interface Props {
     state: "calibrating" | "rest" | "workout" | "paused" | "complete";
     set: SetConfig;
+    prevSet: any;
     actions: {
       next: () => void;
       prev: () => void;
@@ -130,7 +133,16 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
         >
           <Show when={props.state === "calibrating"}>
             <div>Calibrating...</div>
-            <div>{props.calibrationRepsRemaining} reps remaining</div>
+            <div class="flex w-full">
+              <div class="flex-1 text-center py-2">
+                <div class="text-xl font-light">{props.calibrationRepsRemaining}</div>
+                <div class="text-xs text-gray-300">ROM Reps</div>
+              </div>
+              <div class="flex-1 text-center py-2">
+                <div class="text-xl font-light"><Timer since={props.prevSet?.time} /></div>
+                <div class="text-xs text-gray-300">Rest</div>
+              </div>
+            </div>
           </Show>
           <Show when={props.state === "workout"}>
             <Reps

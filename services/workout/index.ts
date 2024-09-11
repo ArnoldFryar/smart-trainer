@@ -119,7 +119,7 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
     const baseObject = set.mode === "ECCENTRIC" ? metrics.eccentric : metrics;
     const repMaxes = baseObject.repMaxes;
 
-    saveSet({
+    return saveSet({
       user_id: set.userId,
       workout_id,
       exercise_id: set.exercise.id,

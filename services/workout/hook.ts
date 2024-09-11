@@ -5,6 +5,7 @@ import {
   untrack,
   createResource,
 } from "solid-js";
+import { getSets } from "../db/settings";
 import {
   ActivateConfig,
   EchoConfig,
@@ -26,7 +27,7 @@ export function createWorkoutService(
     samples: Sample[],
     range: { top: number; bottom: number },
     interrupted?: boolean
-  ) => void
+  ) => Promise<void>
 ) {
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
@@ -34,6 +35,10 @@ export function createWorkoutService(
   const [currentSet] = createResource<SetConfig, number>(currentSetIndex, (i) =>
     sets[i]()
   );
+  const [previousSets, { refetch }] = createResource(() => {
+    return getSets(currentSet()?.userId);
+  });
+  const prevSet = () => previousSets()?.[0];
   const [currentSetSamples, setCurrentSetSamples] = createSignal<Sample[]>([]);
   const currentSetActivationConfig = () => {
     const { limit, ...limitConfig } = LIMIT_HANDLERS[currentSet()?.limit]?.(
@@ -148,7 +153,7 @@ export function createWorkoutService(
 
         await limit(repCount, currentSetPhases, aborted);
         await Trainer.stop();
-        saveSet();
+        saveSet().then(() => refetch());
 
         if (currentSetIndex() === sets.length - 1) {
           setState("complete");
@@ -193,6 +198,9 @@ export function createWorkoutService(
       },
       get calibrationRepsRemaining() {
         return calibrationRepsRemaining();
+      },
+      get prevSet() {
+        return prevSet();
       },
     },
     { next, prev, pause, resume },
