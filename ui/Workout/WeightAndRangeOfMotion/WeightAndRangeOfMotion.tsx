@@ -1,3 +1,5 @@
+import { Show } from "solid-js";
+
 export namespace WeightAndRangeOfMotion {
   export interface Props {
     unit: 'lbs' | 'kg';
@@ -77,28 +79,32 @@ export function RangeOfMotion(props: RangeOfMotion.Props) {
       </filter>
       <Circle stroke='hsl(var(--gray-700))' direction={1} percent={1} />
       <Circle stroke='hsl(var(--gray-700))' direction={-1} percent={1} />
-      <Circle
-        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-800))' : 'hsl(var(--secondary-900))'}
-        direction={1}
-        percent={props.leftROM}
-        filter="url(#f2)"
-      />
-      <Circle
-        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-800))' : 'hsl(var(--secondary-900))'}
-        direction={-1}
-        percent={props.rightROM}
-        filter="url(#f2)"
-      />
-      <Circle
-        stroke={props.leftROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-600))'}
-        direction={1}
-        percent={props.leftROM}
-      />
-      <Circle
-        stroke={props.rightROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-600))'}
-        direction={-1}
-        percent={props.rightROM}
-      />
+      <Show when={props.leftROM !== null}>
+        <Circle
+          stroke={props.leftROM >= 0 ? 'hsl(var(--primary-800))' : 'hsl(var(--secondary-900))'}
+          direction={1}
+          percent={props.leftROM}
+          filter="url(#f2)"
+        />
+        <Circle
+          stroke={props.leftROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-600))'}
+          direction={1}
+          percent={props.leftROM}
+        />
+      </Show>
+      <Show when={props.rightROM !== null}>
+        <Circle
+          stroke={props.rightROM >= 0 ? 'hsl(var(--primary-800))' : 'hsl(var(--secondary-900))'}
+          direction={-1}
+          percent={props.rightROM}
+          filter="url(#f2)"
+        />
+        <Circle
+          stroke={props.rightROM >= 0 ? 'hsl(var(--primary-400))' : 'hsl(var(--secondary-600))'}
+          direction={-1}
+          percent={props.rightROM}
+        />
+      </Show>
     </svg>
   );
 }

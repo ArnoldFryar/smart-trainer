@@ -25,15 +25,8 @@ export function WorkoutActive(props: WorkoutActive.Props) {
   const [sets, save] = createWorkoutIterator(props.config);
   const [workoutState, actions] = createWorkoutService(sets, save);
 
-  const leftWeight = () => {
-    const { left } = Trainer.sample();
-    return left.position <= 0.5 && left.velocity === 0 ? 0 : left.force;
-  };
-
-  const rightWeight = () => {
-    const { right } = Trainer.sample();
-    return right.position <= 0.5 && right.velocity === 0 ? 0 : right.force;
-  };
+  const leftWeight = () => Trainer.sample().left.force;
+  const rightWeight = () => Trainer.sample().right.force;
 
   const leftROM = () => Trainer.rangeOfMotion().left;
   const rightROM = () => Trainer.rangeOfMotion().right;
@@ -103,6 +96,11 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
     props.state === "workout" ||
     props.state === "paused";
 
+  const singleCable = () => props.set.exercise.type === "SINGLE_CABLE" || props.set.exercise.type === "ALTERNATE";
+  const activeSide = () => props.leftROM > props.rightROM ? "LEFT" : "RIGHT";
+  const leftActive = () => !singleCable() || activeSide() === "LEFT";
+  const rightActive = () => !singleCable() || activeSide() === "RIGHT";
+
   return (
     <>
       <Show when={props.state === "rest"}>
@@ -124,12 +122,12 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           exercise={props.set.exercise.id}
           side={props.set.side}
           video=""
-          leftWeight={props.leftWeight}
-          rightWeight={props.rightWeight}
+          leftWeight={leftActive() ? props.leftWeight : 0}
+          rightWeight={rightActive() ? props.rightWeight : 0}
           targetWeight={props.set.modeConfig.weight}
           currentRep={props.currentRep}
-          leftROM={props.leftROM}
-          rightROM={props.rightROM}
+          leftROM={leftActive() ? props.leftROM : null}
+          rightROM={rightActive() ? props.rightROM : null}
         >
           <Show when={props.state === "calibrating"}>
             <div>Calibrating...</div>
