@@ -108,7 +108,9 @@ export function createWorkoutService(
   const saveSet = (interrupted?: boolean) => {
     const samples = currentSetSamples();
     if (samples.length > 0 && !savedSamples.has(samples)) {
-      save(currentSet(), samples, rangeOfMotion(), interrupted);
+      save(currentSet(), samples, rangeOfMotion(), interrupted).then(() =>
+        refetch()
+      );
       savedSamples.add(samples);
     }
   };
@@ -153,7 +155,7 @@ export function createWorkoutService(
 
         await limit(repCount, currentSetPhases, aborted);
         await Trainer.stop();
-        saveSet().then(() => refetch());
+        saveSet();
 
         if (currentSetIndex() === sets.length - 1) {
           setState("complete");
