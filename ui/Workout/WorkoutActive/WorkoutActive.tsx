@@ -13,6 +13,7 @@ import {
 import { getSetMetrics } from "../../../services/workout/util.js";
 import { wakeLock } from "../../../services/util/wake-lock.js";
 import { Timer } from "../../_common/Timer/Timer.jsx";
+import { WorkoutSet } from "../../../services/db/settings.js";
 
 export namespace WorkoutActive {
   export interface Props {
@@ -47,6 +48,8 @@ export function WorkoutActive(props: WorkoutActive.Props) {
         onComplete={props.onComplete}
         prevSet={workoutState.prevSet}
         actions={{ ...actions, complete: props.onComplete }}
+        totalSets={sets.length}
+        currentSetIndex={workoutState.currentSetIndex}
         video=""
         unit={"lbs" /* TODO: get from user preferences */}
         leftWeight={leftWeight()}
@@ -67,7 +70,7 @@ export namespace WorkoutActiveView {
   export interface Props {
     state: "calibrating" | "rest" | "workout" | "paused" | "complete";
     set: SetConfig;
-    prevSet: any;
+    prevSet?: WorkoutSet;
     actions: {
       next: () => void;
       prev: () => void;
@@ -75,6 +78,8 @@ export namespace WorkoutActiveView {
       resume: () => void;
       complete: () => void;
     };
+    totalSets: number;
+    currentSetIndex: number;
     onComplete: () => void;
     video: string;
     unit: "lbs" | "kg";
@@ -128,6 +133,8 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
           currentRep={props.currentRep}
           leftROM={leftActive() ? props.leftROM : null}
           rightROM={rightActive() ? props.rightROM : null}
+          currentSetIndex={props.currentSetIndex}
+          totalSets={props.totalSets}
         >
           <Show when={props.state === "calibrating"}>
             <div>Calibrating...</div>
@@ -140,6 +147,10 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
                 <div class="text-xl font-light"><Timer since={props.prevSet?.time} /></div>
                 <div class="text-xs text-gray-300">Rest</div>
               </div>
+            </div>
+            <div class="flex w-full">
+              <Button onClick={props.actions.prev} class={`flex-1 ${props.currentSetIndex === 0 ? "opacity-50" : ""}`} disabled={props.currentSetIndex === 0}>Back</Button>
+              <Button onClick={props.actions.next} class={`flex-1 ${props.currentSetIndex === props.totalSets - 1 ? "opacity-50" : ""}`}  disabled={props.currentSetIndex === props.totalSets - 1}>Skip</Button>
             </div>
           </Show>
           <Show when={props.state === "workout"}>
@@ -227,6 +238,8 @@ export namespace WorkoutActiveContainer {
     rightROM: number;
     currentRep: number;
     children: any;
+    currentSetIndex: number;
+    totalSets: number;
   }
 }
 
@@ -238,6 +251,7 @@ export function WorkoutActiveContainer(props: WorkoutActiveContainer.Props) {
     >
       <div class="text-center">
         <div class="text-4xl font-light text-gray-200">{props.exercise}{props.side ? ` (${props.side})` : ""}</div>
+        <div>{props.currentSetIndex + 1}/{props.totalSets}</div>
         <InfoButton />
         <StopButton />
       </div>
