@@ -148,9 +148,9 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
                 <div class="text-xs text-gray-300">Rest</div>
               </div>
             </div>
-            <div class="flex w-full">
-              <Button onClick={props.actions.prev} class={`flex-1 ${props.currentSetIndex === 0 ? "opacity-50" : ""}`} disabled={props.currentSetIndex === 0}>Back</Button>
-              <Button onClick={props.actions.next} class={`flex-1 ${props.currentSetIndex === props.totalSets - 1 ? "opacity-50" : ""}`}  disabled={props.currentSetIndex === props.totalSets - 1}>Skip</Button>
+            <div class="flex w-full mt-4">
+              <Button onClick={props.actions?.prev} class={`flex-1 ${props.currentSetIndex === 0 ? "opacity-50" : ""}`} disabled={props.currentSetIndex === 0}>Back</Button>
+              <Button onClick={props.actions?.next} class={`flex-1 ${props.currentSetIndex === props.totalSets - 1 ? "opacity-50" : ""}`}  disabled={props.currentSetIndex === props.totalSets - 1}>Skip</Button>
             </div>
           </Show>
           <Show when={props.state === "workout"}>
@@ -160,6 +160,9 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
               currentRep={props.currentRep}
               totalReps={props.set.limitConfig.reps}
               />
+            <div class="flex w-full mt-4">
+              <Button onClick={props.actions?.reset} class="flex-1">Reset</Button>
+            </div>
             {/* <Show when={props.set.limit === "ASSESSMENT" || props.set.limit === "SPOTTER"}>
               <Reps
                 targetVelocity={props.targetVelocity}
@@ -252,8 +255,6 @@ export function WorkoutActiveContainer(props: WorkoutActiveContainer.Props) {
       <div class="text-center">
         <div class="text-4xl font-light text-gray-200">{props.exercise}{props.side ? ` (${props.side})` : ""}</div>
         <div>{props.currentSetIndex + 1}/{props.totalSets}</div>
-        <InfoButton />
-        <StopButton />
       </div>
       <div
         class="relative w-96 h-96 flex justify-center items-center"

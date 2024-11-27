@@ -29,6 +29,7 @@ export function createWorkoutService(
     interrupted?: boolean
   ) => Promise<void>
 ) {
+  const [resetCount, setResetCount] = createSignal<number>(0);
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
   const [currentSetIndex, setCurrentSetIndex] = createSignal(0);
@@ -95,14 +96,10 @@ export function createWorkoutService(
     setLoading(true);
     setCurrentSetIndex(currentSetIndex() - 1);
   };
-  const pause = () => {
-    saveSet(true);
-    setState("paused");
+  const reset = () => {
     Trainer.stop();
-  };
-  const resume = () => {
-    saveSet();
-    setState("calibrating");
+    setLoading(true);
+    setResetCount(resetCount() + 1);
   };
   const savedSamples: WeakSet<Sample[]> = new WeakSet();
   const saveSet = (interrupted?: boolean) => {
@@ -126,13 +123,10 @@ export function createWorkoutService(
   });
 
   createAbortEffect((aborted) => {
+    resetCount(); // restart the effect when reset count is incremented
+
     if (currentSet()) {
       untrack(async () => {
-        if (state() === "paused") {
-          setLoading(false);
-          return;
-        }
-
         const { command, config, limit } = currentSetActivationConfig();
 
         setState("calibrating");
@@ -205,6 +199,6 @@ export function createWorkoutService(
         return prevSet();
       },
     },
-    { next, prev, pause, resume },
+    { next, prev, reset },
   ] as const;
 }
