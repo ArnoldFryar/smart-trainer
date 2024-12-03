@@ -307,12 +307,14 @@ function Set(props) {
             </Select>
             <Show when={props.canRemove}>
               <select class="bg-gray-800 ml-2 w-8" onChange={onMenu}>
-                <option value="">⋮</option>
-                <option value="first">First Set</option>
-                <option value="copy">Copy</option>
-                <option value="up">Move Up</option>
-                <option value="down">Move Down</option>
-                <option value="remove">Remove</option>
+                <option value="" hidden>⋮</option>
+                <optgroup label={`${value().exercise} ${value().mode}`}>
+                  <option value="first">First Set</option>
+                  <option value="copy">Copy</option>
+                  <option value="up">Move Up</option>
+                  <option value="down">Move Down</option>
+                  <option value="remove">Remove</option>
+                </optgroup>
               </select>
             </Show>
           </span>
