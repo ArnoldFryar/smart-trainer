@@ -23,8 +23,8 @@ export namespace WorkoutActive {
 }
 
 export function WorkoutActive(props: WorkoutActive.Props) {
-  const [sets, save] = createWorkoutIterator(props.config);
-  const [workoutState, actions] = createWorkoutService(sets, save);
+  const [sets, startingIndex, save] = createWorkoutIterator(props.config);
+  const [workoutState, actions] = createWorkoutService(sets, startingIndex, save);
 
   const leftWeight = () => Trainer.sample().left.force;
   const rightWeight = () => Trainer.sample().right.force;
@@ -74,8 +74,7 @@ export namespace WorkoutActiveView {
     actions: {
       next: () => void;
       prev: () => void;
-      pause: () => void;
-      resume: () => void;
+      reset: () => void;
       complete: () => void;
     };
     totalSets: number;

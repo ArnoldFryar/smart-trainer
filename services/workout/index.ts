@@ -14,6 +14,7 @@ import { Sample, encodeSamples } from "../device/cables.js";
 export type { Exercise };
 
 export type SetConfig = {
+  index: number;
   exercise: Exercise;
   rest: number;
   side;
@@ -52,6 +53,7 @@ export type WorkoutConfig = {
     forcedReps?: number;
     velocityLoss?: number;
   }>;
+  startingSetIndex: number;
 };
 
 export async function selectExercises() {
@@ -103,7 +105,11 @@ export const DEFAULT_USERS = {
   },
 };
 
-export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
+export function createWorkoutIterator({
+  sets,
+  users: userIds,
+  startingSetIndex,
+}: WorkoutConfig) {
   const users = DEFAULT_USERS;
   const workout_id = Math.random() + "";
   const sides = ["LEFT", "RIGHT"].sort(() => Math.random() - 0.5);
@@ -143,7 +149,10 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
       .catch(console.error);
   };
 
-  for (const set of sets) {
+  let startingIndex;
+
+  for (let i = 0; i < sets.length; i++) {
+    const set = sets[i];
     const {
       exercise: exerciseId,
       mode,
@@ -155,11 +164,15 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
       ...limitConfig
     } = set;
     const exercise = EXERCISES[set.exercise];
+    if (i === startingSetIndex) {
+      startingIndex = setConfigs.length;
+    }
     for (const userId of userIds) {
       const user = users[userId];
       (exercise.type === "ALTERNATE" ? sides : [null]).forEach((side) => {
         setConfigs.push(async () => {
           return {
+            index: i,
             exercise,
             userId,
             hue: user.hue,
@@ -180,7 +193,7 @@ export function createWorkoutIterator({ sets, users: userIds }: WorkoutConfig) {
     }
   }
 
-  return [setConfigs, save] as const;
+  return [setConfigs, startingIndex, save] as const;
 }
 
 function normalizeModeConfig(config) {

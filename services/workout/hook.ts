@@ -14,14 +14,19 @@ import {
 } from "../device/activate";
 import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
-import { createAbortEffect, reactivePromise } from "../util/signals";
-import { SetConfig } from "./index";
+import {
+  createAbortEffect,
+  createLocalSignal,
+  reactivePromise,
+} from "../util/signals";
+import { SetConfig, WorkoutConfig } from "./index";
 import { LIMIT_HANDLERS, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
 import { getSetMetrics, splitSamplesByPhase } from "./util";
 
 export type State = "calibrating" | "workout" | "rest" | "paused" | "complete";
 export function createWorkoutService(
   sets: Array<() => Promise<SetConfig>>,
+  startingIndex: number,
   save: (
     set: SetConfig,
     samples: Sample[],
@@ -29,10 +34,16 @@ export function createWorkoutService(
     interrupted?: boolean
   ) => Promise<void>
 ) {
+  const [previousWorkoutConfig, setPreviousWorkoutConfig] = createLocalSignal(
+    "previous-workout",
+    {} as WorkoutConfig
+  );
   const [resetCount, setResetCount] = createSignal<number>(0);
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
-  const [currentSetIndex, setCurrentSetIndex] = createSignal(0);
+  const [currentSetIndex, setCurrentSetIndex] = createSignal(
+    startingIndex || 0
+  );
   const [currentSet] = createResource<SetConfig, number>(currentSetIndex, (i) =>
     sets[i]()
   );
@@ -153,8 +164,18 @@ export function createWorkoutService(
 
         if (currentSetIndex() === sets.length - 1) {
           setState("complete");
+          setPreviousWorkoutConfig({
+            ...previousWorkoutConfig(),
+            startingSetIndex: 0,
+          });
         } else {
           setState("rest");
+          const startingSetIndex =
+            (await sets[currentSetIndex() + 1]())?.index || 0;
+          setPreviousWorkoutConfig({
+            ...previousWorkoutConfig(),
+            startingSetIndex,
+          });
         }
       });
     }

@@ -37,10 +37,12 @@ export function WorkoutForm(props: WorkoutForm.Props) {
     const data = getNestedFormData(e.target);
     props.onSubmit(data);
   };
+  const [startingSetIndex, setStartingSetIndex] = createSignal(props.config.startingSetIndex || 0);
   return (
     <form onSubmit={activate} class="p-4">
       <UserSelect value={props.config.users}/>
-      <Sets value={props.config.sets} name="sets" cache={props.cache}/>
+      <Sets value={props.config.sets} name="sets" cache={props.cache} startIndex={startingSetIndex()} setStartIndex={setStartingSetIndex}/>
+      <input type="hidden" name="startingSetIndex" value={startingSetIndex()}/>
       <Button type="submit" primary>{props.connected ? "Workout!" : "Connect"}</Button>
     </form>
   );
@@ -118,15 +120,34 @@ function Sets(props) {
   let button!: HTMLButtonElement;
   const [sets, setSets] = createSignal(props.value || [DEFAULT_SET]);
   const [openIndex, setOpenIndex] = createSignal(-1);
+  const move = (i, dir) => {
+    const formData = getNestedFormData((button as HTMLButtonElement).form);
+    const currentSets = formData[props.name];
+    const newSets = [...currentSets];
+    const temp = newSets[i];
+    newSets[i] = newSets[i + dir];
+    newSets[i + dir] = temp;
+    setSets(newSets);
+  }
+  const copy = (index) => {
+    const formData = getNestedFormData((button as HTMLButtonElement).form);
+    const currentSets = formData[props.name] || [];
+    if (index == -1) index = currentSets.length - 1;
+    setSets([
+      ...currentSets.slice(0, index),
+      currentSets[index] || DEFAULT_SET,
+      ...currentSets.slice(index)
+    ]);
+    if (index < props.startIndex) {
+      props.setStartIndex(props.startIndex + 1);
+    }
+    if (index < openIndex()) {
+      setOpenIndex(openIndex() + 1);
+    }
+  }
   const copyLast = (e) => {
     e.preventDefault();
-    const formData = getNestedFormData((e.target as HTMLButtonElement).form);
-    const currentSets = formData[props.name] || [];
-    setSets([
-      ...currentSets,
-      currentSets[currentSets.length - 1] || DEFAULT_SET
-    ]);
-    // setOpenIndex(currentSets.length);
+    copy(-1);
   }
   const copyAll = (e) => {
     e.preventDefault();
@@ -156,6 +177,9 @@ function Sets(props) {
       } else if (openIndex() > i) {
         setOpenIndex(openIndex() - 1)
       }
+      if (i < props.startIndex) {
+        props.setStartIndex(props.startIndex - 1);
+      }
     }
   }
   const canRemove = () => sets().length > 1;
@@ -169,10 +193,14 @@ function Sets(props) {
             value={set} 
             cache={props.cache}
             open={i() === openIndex()} 
-            onOpen={(o) => setOpenIndex(o ? i() : -1)} 
+            onOpen={(o) => setOpenIndex(o ? i() : -1)}
             onChange={updateSets} 
-            canRemove={canRemove()}
+            isActive={i() >= props.startIndex}
+            onSelect={() => props.setStartIndex(i())}
+            onMove={(dir) => move(i(), dir)}
+            onCopy={() => copy(i())} 
             onRemove={() => removeSet(i())}
+            canRemove={canRemove()}
             />
         )}
       </For>
@@ -214,11 +242,6 @@ function Set(props) {
   const onOpen = (e) => {
     props.onOpen(e.currentTarget.open);
   }
-  const onRemove = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    props.onRemove?.();
-  }
   const applyCachedExercise = (e) => {
     const exercise = e.target.value;
     const cachedSet = props.cache[exercise]?.[value().mode];
@@ -242,8 +265,25 @@ function Set(props) {
     }
   }
 
+  const onMenu = (e) => {
+    const select = e.target;
+    const value = select.value;
+    select.value = "";
+    if (value === "first") {
+      props.onSelect?.();
+    } else if (value === "copy") {
+      props.onCopy?.();
+    } else if (value === "remove") {
+      props.onRemove?.();
+    } else if (value === "up") {
+      props.onMove?.(1)
+    } else if (value === "down") {
+      props.onMove?.(-1)
+    }
+  }
+
   return (
-    <details open={props.open} onToggle={onOpen} class="mb-2" onChange={props.onChange}>
+    <details open={props.open} onToggle={onOpen} class={"mb-2" + (props.isActive ? "" : " opacity-50")} onChange={props.onChange}>
       <summary class="flex justify-center items-center p-2 text-gray-400 bg-gray-800 rounded">
         <span class="text-white flex-1 ml-1">
           <span class="flex">
@@ -266,7 +306,14 @@ function Set(props) {
               </For>
             </Select>
             <Show when={props.canRemove}>
-              <Button class="ml-2" onClick={onRemove}>✕</Button>
+              <select class="bg-gray-800 ml-2 w-8" onChange={onMenu}>
+                <option value="">⋮</option>
+                <option value="first">First Set</option>
+                <option value="copy">Copy</option>
+                <option value="up">Move Up</option>
+                <option value="down">Move Down</option>
+                <option value="remove">Remove</option>
+              </select>
             </Show>
           </span>
           <span class="block text-xs text-gray-400 mt-2">
