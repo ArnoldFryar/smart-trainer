@@ -111,14 +111,7 @@ export function WorkoutActiveView(props: WorkoutActiveView.Props) {
         <SetSummary set={props.set} next={props.actions.next} setMetrics={props.setMetrics} />
       </Show>
       <Show when={props.state === "complete"}>
-        <div class="flex flex-col p-4 h-full">
-          <div class="text-gray-400 uppercase text-center flex-none">Workout Complete</div>
-          <pre class="grow text-sm overflow-y-auto">
-            {JSON.stringify(props.setMetrics ?? {}, null, 2)}
-            <div>TODO: Total Joules*, Total Time, Heaviest Weight, #PRs, #Sets</div>
-          </pre>
-          <Button onClick={props.onComplete} class="flex-none">Finish Workout</Button>          
-        </div>
+        <SetSummary set={props.set} next={props.onComplete} setMetrics={props.setMetrics} />
       </Show>
       <Show when={active()}>
         <WorkoutActiveContainer
@@ -208,8 +201,13 @@ export namespace SetSummary {
 
 export function SetSummary(props: SetSummary.Props) {
   return (
-    <div class="flex flex-col p-4 h-full">
-      <div class="text-gray-400 uppercase text-center flex-none">Set Complete</div>
+    <div class="flex flex-col h-full">
+      <div class="flex-1 p-4 h-0 overflow-y-auto">
+        <div class="text-gray-400 uppercase text-center flex-none">Set Complete</div>
+        <pre class="text-sm">
+          {JSON.stringify(props.setMetrics ?? {}, null, 2)}
+        </pre>
+      </div>
       {/* Best Effort () */}
       {/* + Rep PRs () */}
       {/* Total Reps */}
@@ -219,10 +217,7 @@ export function SetSummary(props: SetSummary.Props) {
       {/* Total Joules () */}
       {/* Total Time */}
       {/* Gold: #ffcc00, Silver: #aabbcc, Bronze: #dd9966 */}
-      <pre class="grow text-sm overflow-y-auto">
-        {JSON.stringify(props.setMetrics ?? {}, null, 2)}
-      </pre>
-      <AutoButton timeout={props.set.rest ?? 10000} onClick={props.next} class="flex-none">Next Set</AutoButton>          
+      <AutoButton timeout={props.set.rest ?? 10000} onClick={props.next} class="flex-none m-4">Next Set</AutoButton>          
     </div>
   );
 }

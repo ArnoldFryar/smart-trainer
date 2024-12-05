@@ -39,11 +39,13 @@ export function WorkoutForm(props: WorkoutForm.Props) {
   };
   const [startingSetIndex, setStartingSetIndex] = createSignal(props.config.startingSetIndex || 0);
   return (
-    <form onSubmit={activate} class="p-4">
-      <UserSelect value={props.config.users}/>
-      <Sets value={props.config.sets} name="sets" cache={props.cache} startIndex={startingSetIndex()} setStartIndex={setStartingSetIndex}/>
-      <input type="hidden" name="startingSetIndex" value={startingSetIndex()}/>
-      <Button type="submit" primary>{props.connected ? "Workout!" : "Connect"}</Button>
+    <form onSubmit={activate} class="flex flex-col h-full">
+      <div class="flex-1 h-0 overflow-auto p-4">
+        <UserSelect value={props.config.users}/>
+        <Sets value={props.config.sets} name="sets" cache={props.cache} startIndex={startingSetIndex()} setStartIndex={setStartingSetIndex}/>
+        <input type="hidden" name="startingSetIndex" value={startingSetIndex()}/>
+      </div>
+      <Button class="m-4" type="submit" primary>{props.connected ? "Workout!" : "Connect"}</Button>
     </form>
   );
 }
