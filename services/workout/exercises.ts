@@ -217,6 +217,7 @@ export const EXERCISES: Record<string, Exercise> = {
     ratio: 96.9 / BACK_SQUAT_SL, // 0.44
     mvt: 0.15, // TODO: check
     equipment: EQUIPMENT.ROPE,
+    type: "SINGLE_CABLE",
   },
   LATERAL_RAISE: {
     id: "LATERAL_RAISE",
