@@ -3,6 +3,7 @@ import { EXERCISES } from "../../../services/workout/exercises.js";
 import {
   Button,
   FieldSet,
+  NumberInput,
   Radio,
   RadioGroup,
   Select,
@@ -14,6 +15,7 @@ import { ACTIVE_WORKOUT_MODES, WORKOUT_LIMIT, WORKOUT_MODE, WORKOUT_MODE_CONFIGS
 import { getNestedFormData } from "../../../services/util/form.js";
 import { getEstimated1RepMax } from "../../../services/db/settings.js";
 import { getActivateCommand } from "../../../services/device/activate.js";
+import { decrement, increment } from "../../../services/workout/util.js";
 
 export type SetConfigCache = { 
   [exercise: keyof typeof EXERCISES]: { 
@@ -215,7 +217,7 @@ function Sets(props) {
 function createInputSignal<T extends () => number>(syncedValue: T) {
   const [value, setValue] = createSignal(syncedValue());
   // createEffect(() => setValue(syncedValue()));
-  return [value, setValue, (e) => setValue(parseInt(e.target.value, 10))] as const;
+  return [value, setValue, (e) => setValue(parseFloat(e.target.value))] as const;
 }
 
 function Set(props) {
@@ -356,7 +358,7 @@ function Set(props) {
           <FieldSet 
             label={`${value().mode === WORKOUT_MODE.PROGRESSION ? "Starting Weight" : "Weight"}`} 
             subtext={`(${(100*weight()/e1rm()).toFixed(1)}% e1RM)`}>
-            <Slider name={`${props.name}.weight`} value={weight() ?? 40} max={440} min={1} unit="lbs" onInput={onWeightInput}/>
+            <NumberInput name={`${props.name}.weight`} value={weight() ?? 40} max={440} min={1} unit="lbs" precision={2} onInput={onWeightInput} increment={increment} decrement={decrement}/>
           </FieldSet>
           <Show when={value().mode === WORKOUT_MODE.PROGRESSION}>
             <FieldSet label="Maximum Weight" subtext={`(${(100*maxWeight()/e1rm()).toFixed(1)}% e1RM)`}>

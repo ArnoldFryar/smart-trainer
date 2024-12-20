@@ -1,4 +1,4 @@
-import { onMount, onCleanup, createEffect } from "solid-js";
+import { onMount, onCleanup, createEffect, splitProps } from "solid-js";
 
 export function Button(props) {
   return (
@@ -182,6 +182,77 @@ export function Select(props) {
         ${props.class}
       `}
     />
+  );
+}
+
+export function NumberInput(props) {
+  let number_input!: HTMLInputElement;
+
+  const onInput = () => {
+    let value = parseFloat(parseFloat(number_input.value).toFixed(props.precision)) || 0;
+    console.log(value);
+    if (value < props.min) value = props.min;
+    else if (value > props.max) value = props.max;
+    number_input.value = "" + value;
+    props.onInput({ target: number_input });
+  }
+
+  const decrement = () => {
+    number_input.value = props.decrement(parseFloat(number_input.value));
+    onInput();
+  }
+
+  const increment = () => {
+    console.log(props.increment(parseFloat(number_input.value)));
+    number_input.value = props.increment(parseFloat(number_input.value));
+    onInput();
+  }
+
+  return (
+    <div class="flex">
+      <RepeatingButton onClick={decrement} class="p-2 flex-1 border border-gray-600 bg-gray-800 rounded-l">&larr;</RepeatingButton>
+      <input
+        ref={number_input}
+        name={props.name}
+        value={props.value}
+        onInput={onInput}
+        class="bg-gray-800 text-center flex-1 border-y border-gray-600"
+        />
+      <RepeatingButton onClick={increment} class="p-2 flex-1 border border-gray-600 bg-gray-800 rounded-r">&rarr;</RepeatingButton>
+    </div>
+  )
+}
+
+
+export function RepeatingButton(props) {
+  let button!: HTMLButtonElement;
+  const [local, rest] = splitProps(props, ["onClick", "repeatDelay", "repeatRate"]);
+  const repeatDelay = () => local.repeatDelay ?? 300;
+  const repeatRate = () => local.repeatRate ?? 20;
+
+  onMount(() => {
+    let timeout;
+    button.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (!timeout) {
+        local.onClick(e);
+        timeout = setTimeout(() => {
+          local.onClick(e);
+          timeout = setInterval(() => {
+            local.onClick(e);
+          }, 1000 / repeatRate())
+        }, repeatDelay());
+      }
+    });
+    button.addEventListener("pointerup", () => {
+      clearTimeout(timeout);
+      clearInterval(timeout);
+      timeout = undefined;
+    });
+  });
+
+  return (
+    <button ref={button} type="button" {...rest}/>
   );
 }
 
