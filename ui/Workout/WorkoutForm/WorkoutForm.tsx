@@ -369,6 +369,14 @@ function Set(props) {
               <Slider name={`${props.name}.progressionReps`} value={value().progressionReps ?? 3} max={10} min={1} unit="reps"/>
             </FieldSet>
           </Show>
+          <RadioGroup label="Auto Weight Progression" checkedValue={value().autoProgress ?? "on"}>
+            <Radio name={`${props.name}.autoProgress`} value="on">
+              <span class="text-sm">On</span>
+            </Radio>
+            <Radio name={`${props.name}.autoProgress`} value="off">
+              <span class="text-sm">Off</span>
+            </Radio>
+          </RadioGroup>
           <FieldSet label="Spotter Velocity" subtext="X% MVT">
             {/* TODO: show percentage of eMVT */}
             <Slider name={`${props.name}.spotterVelocity`} value={value().spotterVelocity ?? 0.25} max={0.5} min={0} step={0.01} unit="m/s"/>

@@ -14,12 +14,8 @@ import {
 } from "../device/activate";
 import { Sample } from "../device/cables";
 import { setUserHue } from "../user/colors";
-import {
-  createAbortEffect,
-  createLocalSignal,
-  reactivePromise,
-} from "../util/signals";
-import { SetConfig, WorkoutConfig } from "./index";
+import { createAbortEffect, reactivePromise } from "../util/signals";
+import { SetConfig } from "./index";
 import { LIMIT_HANDLERS, WORKOUT_MODE, WORKOUT_MODE_CONFIGS } from "./modes";
 import { getSetMetrics, splitSamplesByPhase } from "./util";
 
@@ -29,15 +25,12 @@ export function createWorkoutService(
   startingIndex: number,
   save: (
     set: SetConfig,
+    setIndex: number,
     samples: Sample[],
     range: { top: number; bottom: number },
     interrupted?: boolean
   ) => Promise<void>
 ) {
-  const [previousWorkoutConfig, setPreviousWorkoutConfig] = createLocalSignal(
-    "previous-workout",
-    {} as WorkoutConfig
-  );
   const [resetCount, setResetCount] = createSignal<number>(0);
   const [state, setState] = createSignal<State>("calibrating");
   const [loading, setLoading] = createSignal(true);
@@ -116,9 +109,13 @@ export function createWorkoutService(
   const saveSet = (interrupted?: boolean) => {
     const samples = currentSetSamples();
     if (samples.length > 0 && !savedSamples.has(samples)) {
-      save(currentSet(), samples, rangeOfMotion(), interrupted).then(() =>
-        refetch()
-      );
+      save(
+        currentSet(),
+        currentSetIndex(),
+        samples,
+        rangeOfMotion(),
+        interrupted
+      ).then(() => refetch());
       savedSamples.add(samples);
     }
   };
@@ -164,18 +161,8 @@ export function createWorkoutService(
 
         if (currentSetIndex() === sets.length - 1) {
           setState("complete");
-          setPreviousWorkoutConfig({
-            ...previousWorkoutConfig(),
-            startingSetIndex: 0,
-          });
         } else {
           setState("rest");
-          const startingSetIndex =
-            (await sets[currentSetIndex() + 1]())?.index || 0;
-          setPreviousWorkoutConfig({
-            ...previousWorkoutConfig(),
-            startingSetIndex,
-          });
         }
       });
     }

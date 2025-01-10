@@ -8,8 +8,9 @@ import {
 } from "./exercises";
 import { WORKOUT_LIMIT, WORKOUT_MODE } from "./modes";
 import { saveSet } from "../db/settings.js";
-import { getSetMetrics } from "./util.js";
+import { getSetMetrics, increment } from "./util.js";
 import { Sample, encodeSamples } from "../device/cables.js";
+import { createLocalSignal } from "../util/signals";
 
 export type { Exercise };
 
@@ -22,6 +23,7 @@ export type SetConfig = {
   modeConfig: {
     weight?: number;
     maxWeight?: number;
+    autoProgress?: boolean;
     progressionReps?: number;
     spotterVelocity?: number;
     concentricDuration?: number;
@@ -45,6 +47,7 @@ export type WorkoutConfig = {
     limit: keyof typeof WORKOUT_LIMIT;
     weight?: number;
     maxWeight?: number;
+    autoProgress?: "on" | "off";
     progressionReps?: number;
     spotterVelocity?: number;
     concentricDuration?: number;
@@ -113,10 +116,15 @@ export function createWorkoutIterator({
   const users = DEFAULT_USERS;
   const workout_id = Math.random() + "";
   const sides = ["LEFT", "RIGHT"].sort(() => Math.random() - 0.5);
+  const [previousWorkoutConfig, setPreviousWorkoutConfig] = createLocalSignal(
+    "previous-workout",
+    {} as WorkoutConfig
+  );
 
   const setConfigs: Array<() => Promise<SetConfig>> = [];
-  const save = (
+  const save = async (
     set: SetConfig,
+    setIndex: number,
     samples: Sample[],
     range: { top: number; bottom: number },
     interrupted: boolean
@@ -125,7 +133,7 @@ export function createWorkoutIterator({
     const baseObject = set.mode === "ECCENTRIC" ? metrics.eccentric : metrics;
     const repMaxes = baseObject.repMaxes;
 
-    return saveSet({
+    await saveSet({
       user_id: set.userId,
       workout_id,
       exercise_id: set.exercise.id,
@@ -147,6 +155,40 @@ export function createWorkoutIterator({
     })
       .then(console.log)
       .catch(console.error);
+
+    let updatedStartingSetIndex: number;
+
+    if (setIndex === setConfigs.length - 1) {
+      updatedStartingSetIndex = 0;
+    } else {
+      updatedStartingSetIndex = (await setConfigs[setIndex + 1]())?.index || 0;
+    }
+
+    let updatedSets = previousWorkoutConfig().sets;
+
+    if (set.modeConfig.autoProgress) {
+      const originalSet = sets[set.index];
+      let updatedSet = updatedSets[set.index];
+
+      if (originalSet.weight) {
+        updatedSet.weight = parseFloat(
+          increment(originalSet.weight).toFixed(2)
+        );
+      }
+      if (originalSet.maxWeight) {
+        updatedSet.maxWeight = parseFloat(
+          increment(originalSet.maxWeight).toFixed(2)
+        );
+      }
+
+      updatedSets[set.index] = updatedSet;
+    }
+
+    setPreviousWorkoutConfig({
+      ...previousWorkoutConfig(),
+      sets: updatedSets,
+      startingSetIndex: updatedStartingSetIndex,
+    });
   };
 
   let startingIndex;
@@ -159,6 +201,7 @@ export function createWorkoutIterator({
       limit,
       weight,
       maxWeight,
+      autoProgress,
       progressionReps,
       spotterVelocity,
       ...limitConfig
@@ -181,6 +224,7 @@ export function createWorkoutIterator({
             modeConfig: normalizeModeConfig({
               weight,
               maxWeight,
+              autoProgress: autoProgress === "on",
               progressionReps,
               spotterVelocity,
             }),
