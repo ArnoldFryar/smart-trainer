@@ -2,6 +2,11 @@
 
 [Open the App](https://vfit.netlify.app/)
 
+## Screenshots
+
+|![Activity](https://github.com/user-attachments/assets/6ef890af-21dc-4362-9564-a2921251f5a7)|![Create Workout](https://github.com/user-attachments/assets/90a1ea09-6e03-44f4-a888-1b44228e2ff9)|![Workout](https://github.com/user-attachments/assets/c73c6207-da73-450b-a71f-b5a61590d3aa)|![Workout](https://github.com/user-attachments/assets/1c0bc3f0-3aa1-4a41-9126-77a635910f25)|![Workout](https://github.com/user-attachments/assets/4716ea41-fb58-466b-bf77-4b23a76325a7)|
+|-|-|-|-|-|
+
 ## Features
 - Create Workouts (very customizable - many more parameters than the offical app are exposed in what I think is a fairly user-friendly way)
 - Partner workouts (select which users are working out, will go 1:1 and change both the app color scheme and trainer color to indicate whose turn it is)
@@ -10,6 +15,14 @@
 - Workout Tracking
 - Performance Tracking (records best efforts per exercise)
 - 1RM Estimation (I use a formula based on Lombardi that allows inputting variable weights per rep so it works on things like TuT/Echo - it's not perfect but also not half bad)
+
+### PWA Installation
+
+The app is configured as a Progressive Web App (PWA) and can be installed on mobile devices:
+
+1. Open the app in a supported browser
+2. Look for "Install App" or "Add to Home Screen" prompt
+3. Follow browser-specific installation steps
 
 ## How I've been using it
 
@@ -30,10 +43,9 @@ The app has evolved around the way I've been using it.  I have the Trainer next 
 
 - **Frontend**: SolidJS + TypeScript
 - **Build Tool**: Vite
-- **Styling**: TailwindCSS + PostCSS
+- **Styling**: TailwindCSS
 - **Database**: PouchDB (local storage)
 - **Charts**: Chart.js + Solid-ChartJS
-- **State Management**: XState
 - **Development**: Storybook for component development
 - **PWA**: Service Worker support with manifest
 
@@ -80,15 +92,6 @@ The app has evolved around the way I've been using it.  I have the Trainer next 
 - `npm run build-storybook` - Build Storybook for production
 - `npm run serve` - Preview production build
 
-## 📱 Device Compatibility
-
-The app connects to smart fitness devices via Bluetooth Low Energy (BLE). Supported features include:
-
-- **Cable Resistance Monitoring**: Track left and right cable resistance
-- **Rep Counting**: Automatic repetition detection
-- **Exercise Modes**: Multiple training modes with different resistance curves
-- **Real-time Feedback**: Live performance metrics during workouts
-
 ### Browser Requirements
 
 - Chrome 56+ / Edge 79+ / Opera 43+ (Web Bluetooth support required)
@@ -121,53 +124,10 @@ The app connects to smart fitness devices via Bluetooth Low Energy (BLE). Suppor
 
 ### Component Development with Storybook
 
-We use Storybook for isolated component development. Each component has corresponding `.stories.tsx` files:
+Storybook is used for isolated component development. Each component has corresponding `.stories.tsx` files:
 
 ```bash
 npm run dev  # Start Storybook
-```
-
-### Code Style
-
-- **TypeScript**: Strict typing enabled
-- **SolidJS**: Reactive programming with signals
-- **Functional Components**: Prefer function components over classes
-- **CSS**: TailwindCSS utility classes
-
-### Adding New Components
-
-1. Create component in appropriate directory under `ui/`
-2. Add corresponding `.stories.tsx` file for Storybook
-3. Export from parent directory's index file
-4. Follow existing naming conventions
-
-## 🚀 Deployment
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-The built files will be in the `dist/` directory.
-
-### PWA Installation
-
-The app is configured as a Progressive Web App (PWA) and can be installed on mobile devices:
-
-1. Open the app in a supported browser
-2. Look for "Install App" or "Add to Home Screen" prompt
-3. Follow browser-specific installation steps
-
-## 🔧 Configuration
-
-### Environment Variables
-
-The app uses Vite's environment variable system. Create `.env.local` for local overrides:
-
-```bash
-# Add any environment-specific variables here
-VITE_API_URL=your-api-url
 ```
 
 ### Device Settings
@@ -178,9 +138,16 @@ Bluetooth device configuration is handled in `services/device/`. Modify connecti
 - `services/device/cables.ts` - Cable resistance parsing
 - `services/device/mode.ts` - Training mode configuration
 
+### Device Playground
+
+Under the "Manual" tab at the bottom you have a playground that gives raw access to the 3 commands that control the Trainer.  You can use these to test new modes and such.
+
+|![Activate](https://github.com/user-attachments/assets/5584efae-fed3-46ab-85d4-4a6e515db976)|![Echo](https://github.com/user-attachments/assets/23a57d9e-19c2-4e44-80b7-e94d46154c44)|![Regular](https://github.com/user-attachments/assets/d2a73b81-374e-4ba7-86d3-5905f651dc7c)|
+|-|-|-|
+
 ## 🤝 Contributing
 
-We welcome contributions! Please follow these steps:
+Contributions welcome! Please follow these steps:
 
 ### Getting Started
 
@@ -213,38 +180,3 @@ We welcome contributions! Please follow these steps:
 
 7. **Create a Pull Request**
 
-### Contribution Guidelines
-
-- **Code Quality**: Ensure TypeScript compilation passes without errors
-- **Component Stories**: Add Storybook stories for new UI components
-- **Documentation**: Update README and code comments as needed
-- **Commit Messages**: Use conventional commit format (`feat:`, `fix:`, `docs:`, etc.)
-- **Testing**: Test Bluetooth functionality when possible
-
-### Areas for Contribution
-
-- **New Exercise Types**: Add support for additional exercises
-- **Device Integration**: Improve Bluetooth device compatibility
-- **UI/UX Improvements**: Enhance user interface and experience
-- **Performance**: Optimize app performance and bundle size
-- **Accessibility**: Improve accessibility features
-- **Documentation**: Improve code documentation and guides
-
-## 📄 License
-
-[Add your license information here]
-
-## 🐛 Issues and Support
-
-If you encounter any issues or have questions:
-
-1. Check existing issues in the repository
-2. Create a new issue with detailed description
-3. Include browser version and device information for Bluetooth-related issues
-
-## 🙏 Acknowledgments
-
-- Built with [SolidJS](https://www.solidjs.com/)
-- Styled with [TailwindCSS](https://tailwindcss.com/)
-- Bundled with [Vite](https://vitejs.dev/)
-- Component development with [Storybook](https://storybook.js.org/)
