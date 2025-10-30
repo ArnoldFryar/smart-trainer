@@ -1,17 +1,30 @@
 # VFit: Smart Fitness App 🏋️‍♂️
 
-A modern, progressive web application for smart fitness tracking with Bluetooth device integration. Built with SolidJS, TypeScript, and Vite.
+[Open the App](https://vfit.netlify.app/)
 
-## 🌟 Features
+## Features
+- Create Workouts (very customizable - many more parameters than the offical app are exposed in what I think is a fairly user-friendly way)
+- Partner workouts (select which users are working out, will go 1:1 and change both the app color scheme and trainer color to indicate whose turn it is)
+- Workout modes (mostly match up with the Echo/Pump/OldSchool/TuT, but I have some extra ones I've been experimenting with)
+- Audio Cues
+- Workout Tracking
+- Performance Tracking (records best efforts per exercise)
+- 1RM Estimation (I use a formula based on Lombardi that allows inputting variable weights per rep so it works on things like TuT/Echo - it's not perfect but also not half bad)
 
-- **Bluetooth Device Integration**: Connect to smart fitness equipment via Web Bluetooth API
-- **Workout Tracking**: Track exercises, sets, reps, and performance metrics
-- **Real-time Analytics**: Analyze exercise form and performance data
-- **Progressive Web App**: Install on mobile devices for native app experience
-- **Multiple Training Modes**: Support for various training styles (Echo, Pump, Old School, Chains, etc.)
-- **Exercise Database**: Comprehensive exercise library with demonstrations
-- **Workout History**: Track progress over time with detailed analytics
-- **Modern UI**: Beautiful, responsive interface built with TailwindCSS
+## How I've been using it
+
+The app has evolved around the way I've been using it.  I have the Trainer next to my desk. The idea was to have something I could just pick up do a few sets and then return to work.
+
+- It just remembers the last workout, but if you stop mid workout it will pickup where you left off
+- There's an auto progression system where it increases the weight of a set the next time you do it (by roughly 1%)
+- When there are multiple users (partner workout), the weights of the second (and third, etc.) are based on 1RM%
+
+## Areas to improve
+
+- Only one saved workout. Definitely an area for improvement.
+- Users are currently hard coded
+- Limited exercise selection. We should pull in the full Vitrivian library.
+- Cross-device data syncing requires you to point to your own couchdb instance - not very user friendly. It also doesn't seem to scale well. It has started to choke when syncing my full workout history to a new device.
 
 ## 🛠️ Tech Stack
 
